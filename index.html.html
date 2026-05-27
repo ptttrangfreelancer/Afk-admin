@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <meta name="theme-color" content="#0a0714"/>
+  <title>AFK HUB — Admin</title>
+
+  <!-- React + Babel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <!-- Recharts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.js"></script>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0a0f;font-family:'Courier New',monospace;color:#e2e8f0;overflow-x:hidden}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:#0a0714}
+    ::-webkit-scrollbar-thumb{background:#7c3aed;border-radius:2px}
+    input,select,textarea{background:rgba(10,8,20,.8);border:1px solid #3b1fa8;border-radius:8px;padding:8px 14px;color:#e2e8f0;font-size:13px;font-family:inherit;outline:none;transition:border-color .2s}
+    input:focus,select:focus{border-color:#a855f7;box-shadow:0 0 0 2px rgba(168,85,247,.15)}
+    option{background:#0f0c1c}
+  </style>
+</head>
+<body style="margin:0;background:#0a0a0f">
+<div id="root"></div>
+
+<script type="text/babel">
+const {useState,useEffect,useCallback,useRef} = React;
+const {
+  LineChart,Line,BarChart,Bar,PieChart,Pie,Cell,
+  XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer
+} = Recharts;
+
+// ─────────────────────────────────────────────────────
+// ⚙️  CONFIG — CHỈ CẦN ĐIỀN 2 CHỖ NÀY
+// ─────────────────────────────────────────────────────
+const FBKEY     = "AIzaSyAiDeA-B1wSCMEZ9FguSKHBjH3653JAwJA";
+const PROJECT   = "afk-hub";
+// ─────────────────────────────────────────────────────
+
+const FB        = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+const AUTH_URL  = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FBKEY}`;
+const REFRESH_URL = `https://securetoken.googleapis.com/v1/token?key=${FBKEY}`;
+
+const STATUS_COLS  = ["pending","preparing","ready","completed"];
+const STATUS_LABEL = {pending:"⏳ Chờ",preparing:"🔥 Đang pha",ready:"✅ Sẵn sàng",completed:"🏁 Xong"};
+const STATUS_COLOR = {pending:"#eab308",preparing:"#f97316",ready:"#22c55e",completed:"#4b5563"};
+const STATUS_NEXT  = {pending:"preparing",preparing:"ready",ready:"completed"};
+const vnd = n => (n||0).toLocaleString("vi-VN")+"đ";
+
+const ROLE_PERMISSIONS = {
+  owner:   ["orders","menu","employees","ingredients","recipes","logs","analytics","settings"],
+  manager: ["orders","menu","ingredients","logs","analytics"],
+  staff:   ["orders"],
+};
+const ROLE_COLORS = {owner:"#eab308",manager:"#a855f7",staff:"#22d3ee"};
+const LOG_COLORS  = {
+  import:            {bg:"#14532d",color:"#4ade80"},
+  usage:             {bg:"#1e1b4b",color:"#818cf8"},
+  waste:             {bg:"#7f1d1d",color:"#f87171"},
+  manual_adjustment: {bg:"#78350f",color:"#fbbf24"},
+};
+const PIE_COLORS = ["#a855f7","#eab308","#22d3ee","#f87171","#4ade80"];
+
+// ─────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────
+const S = {
+  wrap:  {minHeight:"100vh",background:"#0a0a0f",color:"#e2e8f0",fontFamily:"'Courier New',monospace"},
+  panel: {background:"rgba(15,12,28,.95)",border:"1px solid #2d1b69",borderRadius:12,padding:20,marginBottom:16},
+  card:  {background:"rgba(20,14,40,.9)",border:"1px solid #3b1fa8",borderRadius:10,padding:16},
+  input: {background:"rgba(10,8,20,.8)",border:"1px solid #3b1fa8",borderRadius:8,padding:"8px 14px",color:"#e2e8f0",fontSize:13,width:"100%",outline:"none",fontFamily:"inherit",boxSizing:"border-box"},
+  btn:   v=>({
+    background:v==="primary"?"linear-gradient(135deg,#7c3aed,#a855f7)":v==="danger"?"linear-gradient(135deg,#7f1d1d,#dc2626)":v==="success"?"linear-gradient(135deg,#14532d,#16a34a)":"rgba(30,20,60,.8)",
+    border:v==="ghost"?"1px solid #3b1fa8":"none",
+    borderRadius:8,padding:"8px 18px",color:"#fff",cursor:"pointer",
+    fontSize:12,fontWeight:700,letterSpacing:1,fontFamily:"inherit",transition:"opacity .2s",textTransform:"uppercase",
+  }),
+  badge: r=>({background:r==="owner"?"#854d0e":r==="manager"?"#4c1d95":"#164e63",color:ROLE_COLORS[r]||"#94a3b8",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}),
+  th:    {padding:"10px 14px",textAlign:"left",color:"#a855f7",fontSize:11,letterSpacing:2,fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #2d1b69"},
+  td:    {padding:"10px 14px",fontSize:13,borderBottom:"1px solid #1a0f3d",color:"#cbd5e1"},
+  tag:   t=>{const c=LOG_COLORS[t]||{bg:"#1e293b",color:"#94a3b8"};return{background:c.bg,color:c.color,padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}},
+  tip:   {background:"#0f0c1c",border:"1px solid #3b1fa8",borderRadius:8,color:"#e2e8f0",fontSize:12},
+};
+
+// ─────────────────────────────────────────────────────
+// AUTH — Firebase Auth REST API
+// ─────────────────────────────────────────────────────
+const Auth = {
+  // Đăng nhập → trả về {idToken, refreshToken, uid}
+  async login(email, password) {
+    const res  = await fetch(AUTH_URL, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({email, password, returnSecureToken:true}),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.error?.message || "Đăng nhập thất bại";
+      const map = {
+        "EMAIL_NOT_FOUND":"Email không tồn tại.",
+        "INVALID_PASSWORD":"Mật khẩu không đúng.",
+        "INVALID_LOGIN_CREDENTIALS":"Email hoặc mật khẩu không đúng.",
+        "USER_DISABLED":"Tài khoản đã bị vô hiệu hóa.",
+      };
+      throw new Error(map[msg] || msg);
+    }
+    return {idToken:data.idToken, refreshToken:data.refreshToken, uid:data.localId, expiresAt:Date.now()+3500000};
+  },
+
+  // Làm mới token
+  async refresh(refreshToken) {
+    const res  = await fetch(REFRESH_URL, {
+      method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body: `grant_type=refresh_token&refresh_token=${refreshToken}`,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error("Session hết hạn, vui lòng đăng nhập lại.");
+    return {idToken:data.id_token, refreshToken:data.refresh_token, expiresAt:Date.now()+3500000};
+  },
+};
+
+// ─────────────────────────────────────────────────────
+// FIRESTORE REST API (với Auth token)
+// ─────────────────────────────────────────────────────
+function fsHeaders(idToken) {
+  return {"Content-Type":"application/json", ...(idToken?{Authorization:`Bearer ${idToken}`}:{})};
+}
+
+function parseValue(v) {
+  if (!v) return null;
+  if (v.stringValue  !== undefined) return v.stringValue;
+  if (v.integerValue !== undefined) return parseInt(v.integerValue);
+  if (v.doubleValue  !== undefined) return parseFloat(v.doubleValue);
+  if (v.booleanValue !== undefined) return v.booleanValue;
+  if (v.timestampValue !== undefined) return new Date(v.timestampValue);
+  if (v.arrayValue)  return (v.arrayValue.values||[]).map(parseValue);
+  if (v.mapValue)    return parseFields(v.mapValue.fields||{});
+  return null;
+}
+
+function parseFields(fields) {
+  const out = {};
+  for (const [k,v] of Object.entries(fields)) out[k] = parseValue(v);
+  return out;
+}
+
+function parseDoc(doc) {
+  const fields = parseFields(doc.fields||{});
+  return {id: doc.name?.split("/").pop(), ...fields};
+}
+
+function toFV(v) {
+  if (v === null || v === undefined) return {nullValue:null};
+  if (typeof v === "boolean") return {booleanValue:v};
+  if (typeof v === "number")  return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
+  if (typeof v === "string")  return {stringValue:v};
+  if (v instanceof Date)      return {timestampValue:v.toISOString()};
+  if (Array.isArray(v))       return {arrayValue:{values:v.map(x=>({mapValue:{fields:Object.fromEntries(Object.entries(x).map(([k,val])=>[k,toFV(val)]))}}))}};
+  if (typeof v === "object")  return {mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,val])=>[k,toFV(val)]))}};
+  return {stringValue:String(v)};
+}
+
+function objToFields(obj) {
+  return Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,toFV(v)]));
+}
+
+const FS = {
+  async list(col, idToken, pageSize=200) {
+    const res  = await fetch(`${FB}/${col}?key=${FBKEY}&pageSize=${pageSize}`, {headers:fsHeaders(idToken)});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message||`List ${col} failed`);
+    return (data.documents||[]).map(parseDoc);
+  },
+  async get(col, id, idToken) {
+    const res  = await fetch(`${FB}/${col}/${id}?key=${FBKEY}`, {headers:fsHeaders(idToken)});
+    const data = await res.json();
+    if (!res.ok) return null;
+    return parseDoc(data);
+  },
+  async add(col, obj, idToken) {
+    const res  = await fetch(`${FB}/${col}?key=${FBKEY}`, {
+      method:"POST", headers:fsHeaders(idToken),
+      body: JSON.stringify({fields:objToFields(obj)}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message||`Add to ${col} failed`);
+    return parseDoc(data);
+  },
+  async set(col, id, obj, idToken) {
+    const res  = await fetch(`${FB}/${col}/${id}?key=${FBKEY}`, {
+      method:"PATCH", headers:fsHeaders(idToken),
+      body: JSON.stringify({fields:objToFields(obj)}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message||`Set ${col}/${id} failed`);
+    return parseDoc(data);
+  },
+  async patch(col, id, fields, idToken) {
+    const masks = Object.keys(fields).map(k=>`updateMask.fieldPaths=${k}`).join("&");
+    const res  = await fetch(`${FB}/${col}/${id}?${masks}&key=${FBKEY}`, {
+      method:"PATCH", headers:fsHeaders(idToken),
+      body: JSON.stringify({fields:objToFields(fields)}),
+    });
+    if (!res.ok) { const d=await res.json(); throw new Error(d.error?.message||"Patch failed"); }
+  },
+  async delete(col, id, idToken) {
+    await fetch(`${FB}/${col}/${id}?key=${FBKEY}`, {method:"DELETE", headers:fsHeaders(idToken)});
+  },
+};
+
+// ─────────────────────────────────────────────────────
+// HOOKS & UTILS
+// ─────────────────────────────────────────────────────
+function useToast() {
+  const [toast,setToast] = useState(null);
+  const show = (msg,ok=true) => {setToast({msg,ok});setTimeout(()=>setToast(null),2800);};
+  return [toast,show];
+}
+
+function Loader() {
+  return <div style={{textAlign:"center",padding:40,color:"#7c3aed",letterSpacing:4}}>ĐANG TẢI...</div>;
+}
+
+function Toast({msg,ok}) {
+  return (
+    <div style={{position:"fixed",top:68,left:"50%",transform:"translateX(-50%)",zIndex:300,whiteSpace:"nowrap",
+      background:ok?"rgba(34,197,94,.15)":"rgba(239,68,68,.15)",
+      border:`1px solid ${ok?"rgba(34,197,94,.5)":"rgba(239,68,68,.5)"}`,
+      backdropFilter:"blur(12px)",borderRadius:10,padding:"10px 20px",
+      fontSize:11,fontWeight:700,color:ok?"#22c55e":"#ef4444",letterSpacing:1,
+    }}>{msg}</div>
+  );
+}
+
+function Modal({title,onClose,children,width=440}) {
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20,overflowY:"auto"}}>
+      <div style={{...S.panel,width,boxShadow:"0 0 40px rgba(124,58,237,.4)",marginBottom:0}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#a855f7",letterSpacing:2,marginBottom:16}}>{title}</div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Field({label,children}) {
+  return (
+    <div style={{marginBottom:12}}>
+      <div style={{fontSize:9,color:"#7c3aed",letterSpacing:2,marginBottom:4}}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function Toggle({value,onChange}) {
+  return (
+    <div onClick={onChange} style={{width:44,height:24,borderRadius:12,cursor:"pointer",position:"relative",transition:".2s",border:"1px solid #3b1fa8",background:value?"linear-gradient(135deg,#7c3aed,#a855f7)":"#1a0f3d"}}>
+      <div style={{position:"absolute",top:2,left:value?22:2,width:18,height:18,borderRadius:"50%",background:"#fff",transition:".2s"}}/>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// TAB 1 — ORDERS KANBAN
+// ─────────────────────────────────────────────────────
+function OrderCard({order,onUpdate}) {
+  const next  = STATUS_NEXT[order.status];
+  const time  = new Date(order.createdAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+  const [press,setPress] = useState(false);
+  return (
+    <div onClick={()=>next&&onUpdate(order,next)}
+      onTouchStart={()=>next&&setPress(true)} onTouchEnd={()=>setPress(false)} onTouchCancel={()=>setPress(false)}
+      style={{background:"rgba(15,12,28,.95)",border:`1px solid ${STATUS_COLOR[order.status]}44`,borderRadius:10,padding:"10px 12px",position:"relative",cursor:next?"pointer":"default",opacity:press?0.6:1,transition:"opacity .1s",boxShadow:next?`0 0 0 1.5px ${STATUS_COLOR[next]}55`:"none",userSelect:"none",WebkitTapHighlightColor:"transparent"}}
+    >
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
+        <span style={{color:"#eab308",fontWeight:900,fontSize:13,letterSpacing:1}}>{order.orderNumber}</span>
+        <span style={{fontSize:9,color:"#475569"}}>{time}</span>
+      </div>
+      <div style={{marginBottom:8}}>
+        {(order.items||[]).map((it,i)=>(
+          <div key={i} style={{fontSize:11,color:"#94a3b8",lineHeight:1.8}}>
+            <span style={{color:"#e2e8f0",fontWeight:600}}>{it.qty}×</span> {it.em||""} {it.name}
+            {it.sweetness&&<span style={{color:"#475569",fontSize:10}}> · {it.sweetness}</span>}
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:next?8:0}}>
+        <span style={{fontSize:10,color:"#64748b"}}>{order.paymentMethod==="cash"?"💵 Tiền mặt":"🏦 Chuyển khoản"}</span>
+        <span style={{color:"#eab308",fontWeight:900,fontSize:13}}>{vnd(order.total)}</span>
+      </div>
+      {next&&(
+        <div style={{padding:"7px 0",borderRadius:7,textAlign:"center",fontSize:11,fontWeight:900,letterSpacing:1,fontFamily:"inherit",background:`${STATUS_COLOR[next]}18`,color:STATUS_COLOR[next],borderTop:`1px solid ${STATUS_COLOR[next]}40`}}>
+          TAP → {STATUS_LABEL[next]}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrdersTab({token}) {
+  const [orders,setOrders]   = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [search,setSearch]   = useState("");
+  const [ts,setTs]           = useState(null);
+  const [toast,showToast]    = useToast();
+
+  const load = useCallback(async()=>{
+    try {
+      const data = await FS.list("orders",token,300);
+      setOrders(data.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
+      setTs(new Date());
+    } catch(e){showToast("Lỗi tải đơn: "+e.message,false);}
+    finally{setLoading(false);}
+  },[token]);
+
+  useEffect(()=>{load();},[load]);
+  useEffect(()=>{const t=setInterval(load,20000);return()=>clearInterval(t);},[load]);
+
+  const updStatus = async(order,ns)=>{
+    setOrders(p=>p.map(o=>o.orderNumber===order.orderNumber?{...o,status:ns}:o));
+    try {
+      await FS.patch("orders",order.id,{status:ns},token);
+      showToast(`${order.orderNumber} → ${STATUS_LABEL[ns]}`);
+      load();
+    } catch(e){
+      setOrders(p=>p.map(o=>o.orderNumber===order.orderNumber?{...o,status:order.status}:o));
+      showToast("Lỗi: "+e.message,false);
+    }
+  };
+
+  const filtered = !search?orders:orders.filter(o=>o.orderNumber?.toLowerCase().includes(search.toLowerCase())||o.items?.some(i=>i.name?.toLowerCase().includes(search.toLowerCase())));
+  const col = st=>filtered.filter(o=>o.status===st);
+  const todayRev = orders.filter(o=>new Date(o.createdAt).toDateString()===new Date().toDateString()&&o.status!=="pending").reduce((s,o)=>s+o.total,0);
+
+  if(loading) return <Loader/>;
+  return (
+    <div>
+      {toast&&<Toast {...toast}/>}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
+        {[["📦 TỔNG ĐƠN",orders.length,"#a855f7"],["💰 HÔM NAY",vnd(todayRev),"#eab308"],["⏳ ĐANG XỬ LÝ",col("pending").length+col("preparing").length,"#f97316"],["🏁 HOÀN THÀNH",col("completed").length,"#22c55e"]].map(([l,v,c])=>(
+          <div key={l} style={{...S.card,textAlign:"center",padding:"10px 8px"}}>
+            <div style={{fontSize:9,color:"#64748b",letterSpacing:1,marginBottom:3}}>{l}</div>
+            <div style={{fontSize:16,fontWeight:900,color:c}}>{v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:10,marginBottom:16}}>
+        <input style={{...S.input,flex:1}} placeholder="🔍 Tìm mã đơn hoặc tên món..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <button style={{...S.btn("ghost"),whiteSpace:"nowrap"}} onClick={load}>↻ REFRESH</button>
+      </div>
+      <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:12}}>
+        {STATUS_COLS.map(st=>(
+          <div key={st} style={{minWidth:255,flex:"0 0 255px"}}>
+            <div style={{padding:"8px 12px",borderRadius:"8px 8px 0 0",background:`${STATUS_COLOR[st]}18`,borderBottom:`2px solid ${STATUS_COLOR[st]}`,display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{fontSize:11,fontWeight:700,color:STATUS_COLOR[st]}}>{STATUS_LABEL[st]}</span>
+              <span style={{background:STATUS_COLOR[st],color:"#0a0714",borderRadius:"50%",width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900}}>{col(st).length}</span>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"calc(100vh - 330px)",overflowY:"auto"}}>
+              {col(st).length===0
+                ?<div style={{fontSize:10,color:"#334155",textAlign:"center",padding:"20px 0"}}>Trống</div>
+                :col(st).map(o=><OrderCard key={o.id||o.orderNumber} order={o} onUpdate={updStatus}/>)
+              }
+            </div>
+          </div>
+        ))}
+      </div>
+      {ts&&<div style={{textAlign:"center",fontSize:9,color:"#334155",marginTop:10,letterSpacing:1}}>↻ {ts.toLocaleTimeString("vi-VN")} · tự động 20s</div>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// TAB 2 — MENU
+// ─────────────────────────────────────────────────────
+function MenuTab({token}) {
+  const [items,setItems]     = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [search,setSearch]   = useState("");
+  const [modal,setModal]     = useState(false);
+  const [editItem,setEditItem] = useState(null);
+  const [form,setForm]       = useState({name:"",price:"",img:"",available:true});
+  const [saving,setSaving]   = useState(false);
+  const [toast,showToast]    = useToast();
+
+  const load = useCallback(async()=>{
+    try{setItems(await FS.list("menu",token,200));}
+    catch(e){showToast("Lỗi tải menu: "+e.message,false);}
+    finally{setLoading(false);}
+  },[token]);
+
+  useEffect(()=>{load();},[load]);
+
+  const openAdd  = ()=>{setEditItem(null);setForm({name:"",price:"",img:"",available:true});setModal(true);};
+  const openEdit = item=>{setEditItem(item);setForm({name:item.name,price:String(item.price||item.sellPrice||0),img:item.imageUrl||item.img||"",available:item.available!==false});setModal(true);};
+
+  const save = async()=>{
+    if(!form.name||!form.price){showToast("Cần nhập tên và giá",false);return;}
+    setSaving(true);
+    try {
+      const payload = {name:form.name,sellPrice:Number(form.price),imageUrl:form.img||"",available:form.available!==false,updatedAt:new Date().toISOString()};
+      if(editItem?.id) await FS.set("menu",editItem.id,payload,token);
+      else { payload.createdAt=new Date().toISOString(); await FS.add("menu",payload,token); }
+      await load(); setModal(false); showToast(editItem?"Đã cập nhật ✓":"Đã thêm món mới ✓");
+    } catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  const del = async item=>{
+    if(!confirm(`Xoá "${item.name}"?`))return;
+    try{await FS.delete("menu",item.id,token);await load();showToast("Đã xoá ✓");}
+    catch(e){showToast("Lỗi: "+e.message,false);}
+  };
+
+  const toggleAvail = async item=>{
+    try{await FS.patch("menu",item.id,{available:!item.available,updatedAt:new Date().toISOString()},token);await load();}
+    catch(e){showToast("Lỗi: "+e.message,false);}
+  };
+
+  const filtered = items.filter(i=>i.name?.toLowerCase().includes(search.toLowerCase()));
+  if(loading)return <Loader/>;
+  return (
+    <div>
+      {toast&&<Toast {...toast}/>}
+      <div style={{display:"flex",gap:10,marginBottom:14}}>
+        <input style={{...S.input,flex:1}} placeholder="🔍 Tìm tên món..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <button style={S.btn("primary")} onClick={openAdd}>+ THÊM MÓN</button>
+        <button style={S.btn("ghost")} onClick={load}>↻</button>
+      </div>
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        {[[`${items.length} tổng số món`,"#a855f7"],[`${items.filter(i=>i.available!==false).length} đang hiển thị`,"#22c55e"],[`${items.filter(i=>i.available===false).length} đang ẩn`,"#64748b"]].map(([l,c])=>(
+          <div key={l} style={{background:"rgba(20,14,40,.7)",border:"1px solid #2d1b69",borderRadius:8,padding:"7px 14px",fontSize:11,color:c,fontWeight:700}}>{l}</div>
+        ))}
+      </div>
+      {filtered.length===0?(
+        <div style={{...S.card,textAlign:"center",padding:40}}>
+          <div style={{fontSize:36,marginBottom:12}}>🍵</div>
+          <div style={{color:"#475569",fontSize:12}}>Chưa có món nào — bấm "+ Thêm món"</div>
+        </div>
+      ):(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {filtered.map(item=>(
+            <div key={item.id} style={{...S.card,display:"flex",alignItems:"center",gap:12,padding:"12px 14px",opacity:item.available===false?0.5:1}}>
+              <div style={{width:56,height:56,borderRadius:8,flexShrink:0,overflow:"hidden",background:"linear-gradient(135deg,#2d1200,#4a1900)"}}>
+                {(item.imageUrl||item.img)
+                  ?<img src={item.imageUrl||item.img} alt={item.name} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.opacity="0"}/>
+                  :<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>☕</div>
+                }
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#e2e8f0",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
+                <div style={{fontSize:15,fontWeight:900,color:"#eab308"}}>{vnd(item.sellPrice||item.price||0)}</div>
+              </div>
+              <div style={{display:"flex",gap:6,flexShrink:0}}>
+                <button onClick={()=>toggleAvail(item)} style={{padding:"5px 10px",borderRadius:7,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:item.available!==false?"rgba(34,197,94,.15)":"rgba(100,116,139,.15)",color:item.available!==false?"#22c55e":"#64748b",border:`1px solid ${item.available!==false?"rgba(34,197,94,.3)":"rgba(100,116,139,.25)"}`}}>
+                  {item.available!==false?"● ON":"○ OFF"}
+                </button>
+                <button style={{...S.btn("ghost"),padding:"5px 12px"}} onClick={()=>openEdit(item)}>SỬA</button>
+                <button style={{...S.btn("danger"),padding:"5px 12px"}} onClick={()=>del(item)}>XOÁ</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {modal&&(
+        <Modal title={editItem?"✏️ SỬA MÓN":"➕ THÊM MÓN MỚI"} onClose={()=>setModal(false)} width={480}>
+          <Field label="TÊN MÓN"><input style={S.input} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="VD: Cafe đen"/></Field>
+          <Field label="GIÁ BÁN (đồng)"><input style={S.input} type="number" value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} placeholder="25000"/></Field>
+          <Field label="URL HÌNH ẢNH"><input style={S.input} value={form.img} onChange={e=>setForm(p=>({...p,img:e.target.value}))} placeholder="https://..."/></Field>
+          {form.img&&<div style={{borderRadius:8,overflow:"hidden",aspectRatio:"16/7",background:"#0a0714",marginBottom:12}}><img src={form.img} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/></div>}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <span style={{fontSize:12,color:"#94a3b8"}}>HIỂN THỊ TRONG MENU</span>
+            <Toggle value={form.available} onChange={()=>setForm(p=>({...p,available:!p.available}))}/>
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <button style={S.btn("ghost")} onClick={()=>setModal(false)}>HUỶ</button>
+            <button style={S.btn("primary")} onClick={save} disabled={saving}>{saving?"⏳ ĐANG LƯU...":"💾 LƯU MÓN"}</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// TAB 3 — EMPLOYEES
+// ─────────────────────────────────────────────────────
+function EmployeesTab({token,currentUser}) {
+  const [list,setList]       = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [search,setSearch]   = useState("");
+  const [roleF,setRoleF]     = useState("all");
+  const [modal,setModal]     = useState(null);
+  const [form,setForm]       = useState({name:"",email:"",phone:"",role:"staff"});
+  const [saving,setSaving]   = useState(false);
+  const [toast,showToast]    = useToast();
+
+  const load = useCallback(async()=>{
+    try{setList(await FS.list("employees",token));}
+    catch(e){showToast("Lỗi: "+e.message,false);}
+    finally{setLoading(false);}
+  },[token]);
+
+  useEffect(()=>{load();},[load]);
+
+  const filtered = list.filter(e=>(roleF==="all"||e.role===roleF)&&(e.name?.toLowerCase().includes(search.toLowerCase())||e.email?.toLowerCase().includes(search.toLowerCase())));
+
+  const save = async()=>{
+    setSaving(true);
+    try {
+      const payload = {...form,updatedAt:new Date().toISOString()};
+      if(modal.mode==="edit") await FS.patch("employees",modal.data.id,payload,token);
+      else { payload.active=true; payload.createdAt=new Date().toISOString(); await FS.add("employees",payload,token); }
+      await load(); setModal(null); showToast("Đã lưu ✓");
+    } catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  const toggle = async e=>{
+    try{await FS.patch("employees",e.id,{active:!e.active,updatedAt:new Date().toISOString()},token);await load();}
+    catch(err){showToast("Lỗi: "+err.message,false);}
+  };
+
+  if(loading)return <Loader/>;
+  return (
+    <div>
+      {toast&&<Toast {...toast}/>}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <input style={{...S.input,flex:1,minWidth:180}} placeholder="🔍 Tìm nhân viên..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <select style={{...S.input,width:"auto"}} value={roleF} onChange={e=>setRoleF(e.target.value)}>
+          {["all","owner","manager","staff"].map(r=><option key={r} value={r}>{r==="all"?"Tất cả":r}</option>)}
+        </select>
+        {currentUser.role==="owner"&&<button style={S.btn("primary")} onClick={()=>{setForm({name:"",email:"",phone:"",role:"staff"});setModal({mode:"add"});}}>+ THÊM</button>}
+      </div>
+      <div style={{...S.panel,padding:0,overflow:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",minWidth:580}}>
+          <thead><tr>{["Tên","Email","SĐT","Role","Trạng thái","Thao tác"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {filtered.map(e=>(
+              <tr key={e.id} style={{opacity:e.active?1:0.5}}>
+                <td style={S.td}><span style={{color:"#e2e8f0",fontWeight:600}}>{e.name}</span></td>
+                <td style={S.td}>{e.email}</td>
+                <td style={S.td}>{e.phone||"—"}</td>
+                <td style={S.td}><span style={S.badge(e.role)}>{e.role}</span></td>
+                <td style={S.td}><span style={{color:e.active?"#4ade80":"#f87171",fontSize:11}}>{e.active?"● ACTIVE":"● INACTIVE"}</span></td>
+                <td style={S.td}>
+                  <div style={{display:"flex",gap:6}}>
+                    {currentUser.role==="owner"&&<button style={{...S.btn("ghost"),padding:"4px 10px"}} onClick={()=>{setForm({name:e.name,email:e.email,phone:e.phone||"",role:e.role});setModal({mode:"edit",data:e});}}>SỬA</button>}
+                    {currentUser.role==="owner"&&<button style={{...S.btn(e.active?"danger":"success"),padding:"4px 10px"}} onClick={()=>toggle(e)}>{e.active?"TẮT":"BẬT"}</button>}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {modal&&(
+        <Modal title={modal.mode==="add"?"THÊM NHÂN VIÊN":"SỬA NHÂN VIÊN"} onClose={()=>setModal(null)}>
+          {[["name","HỌ TÊN","text"],["email","EMAIL","email"],["phone","SĐT","text"]].map(([k,l,t])=>(
+            <Field key={k} label={l}><input style={S.input} type={t} value={form[k]} onChange={e=>setForm(p=>({...p,[k]:e.target.value}))}/></Field>
+          ))}
+          <Field label="ROLE">
+            <select style={S.input} value={form.role} onChange={e=>setForm(p=>({...p,role:e.target.value}))}>
+              <option value="staff">Staff</option><option value="manager">Manager</option><option value="owner">Owner</option>
+            </select>
+          </Field>
+          <div style={{background:"rgba(234,179,8,.08)",border:"1px solid #854d0e",borderRadius:8,padding:10,marginBottom:12,fontSize:11,color:"#fbbf24"}}>
+            ⚠ Để nhân viên đăng nhập được, tạo account tại:<br/>Firebase Console → Authentication → Add user
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <button style={S.btn("ghost")} onClick={()=>setModal(null)}>HUỶ</button>
+            <button style={S.btn("primary")} onClick={save} disabled={saving}>{saving?"...":"LƯU"}</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// TAB 4 — INGREDIENTS
+// ─────────────────────────────────────────────────────
+function IngredientsTab({token}) {
+  const [items,setItems]     = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [search,setSearch]   = useState("");
+  const [catF,setCatF]       = useState("all");
+  const [modal,setModal]     = useState(null);
+  const [form,setForm]       = useState({name:"",category:"",supplier:"",purchasePrice:"",stockQuantity:"",minimumStock:"",unit:""});
+  const [saving,setSaving]   = useState(false);
+  const [toast,showToast]    = useToast();
+
+  const load = useCallback(async()=>{
+    try{setItems(await FS.list("ingredients",token));}
+    catch(e){showToast("Lỗi: "+e.message,false);}
+    finally{setLoading(false);}
+  },[token]);
+
+  useEffect(()=>{load();},[load]);
+
+  const cats     = ["all",...new Set(items.map(i=>i.category).filter(Boolean))];
+  const filtered = items.filter(i=>(catF==="all"||i.category===catF)&&i.name?.toLowerCase().includes(search.toLowerCase()));
+  const lowStock = items.filter(i=>+(i.stockQuantity||0)<=+(i.minimumStock||0));
+
+  const save = async()=>{
+    setSaving(true);
+    const payload={...form,purchasePrice:+form.purchasePrice,stockQuantity:+form.stockQuantity,minimumStock:+form.minimumStock,updatedAt:new Date().toISOString()};
+    try {
+      if(modal.mode==="add"){payload.createdAt=new Date().toISOString();await FS.add("ingredients",payload,token);}
+      else await FS.patch("ingredients",modal.data.id,payload,token);
+      await load(); setModal(null); showToast("Đã lưu ✓");
+    } catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  if(loading)return <Loader/>;
+  return (
+    <div>
+      {toast&&<Toast {...toast}/>}
+      {lowStock.length>0&&(
+        <div style={{background:"rgba(127,29,29,.3)",border:"1px solid #dc2626",borderRadius:10,padding:12,marginBottom:14,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{color:"#fca5a5",fontWeight:700,fontSize:12}}>⚠ KHO THẤP:</span>
+          {lowStock.map(i=><span key={i.id} style={{background:"#7f1d1d",color:"#f87171",padding:"2px 10px",borderRadius:20,fontSize:11}}>{i.name} ({i.stockQuantity} {i.unit})</span>)}
+        </div>
+      )}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <input style={{...S.input,flex:1,minWidth:180}} placeholder="🔍 Tìm nguyên liệu..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <select style={{...S.input,width:"auto"}} value={catF} onChange={e=>setCatF(e.target.value)}>
+          {cats.map(c=><option key={c} value={c}>{c==="all"?"Tất cả":c}</option>)}
+        </select>
+        <button style={S.btn("primary")} onClick={()=>{setForm({name:"",category:"",supplier:"",purchasePrice:"",stockQuantity:"",minimumStock:"",unit:""});setModal({mode:"add"});}}>+ THÊM</button>
+      </div>
+      <div style={{...S.panel,padding:0,overflow:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
+          <thead><tr>{["Nguyên liệu","Loại","Nhà CC","Giá","Tồn kho","Tối thiểu","Trạng thái","Thao tác"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {filtered.map(item=>{
+              const low=+(item.stockQuantity||0)<=+(item.minimumStock||0);
+              return(
+                <tr key={item.id} style={{background:low?"rgba(127,29,29,.1)":"transparent"}}>
+                  <td style={S.td}><span style={{color:"#e2e8f0",fontWeight:600}}>{item.name}</span></td>
+                  <td style={S.td}>{item.category}</td>
+                  <td style={S.td}>{item.supplier}</td>
+                  <td style={S.td}><span style={{color:"#eab308"}}>₱{item.purchasePrice}</span></td>
+                  <td style={S.td}><span style={{color:low?"#f87171":"#4ade80",fontWeight:700}}>{item.stockQuantity} {item.unit}</span></td>
+                  <td style={S.td}>{item.minimumStock} {item.unit}</td>
+                  <td style={S.td}>{low?<span style={{color:"#f87171",fontSize:10}}>⚠ THẤP</span>:<span style={{color:"#4ade80",fontSize:10}}>● OK</span>}</td>
+                  <td style={S.td}>
+                    <div style={{display:"flex",gap:6}}>
+                      <button style={{...S.btn("ghost"),padding:"4px 10px"}} onClick={()=>{setForm({name:item.name||"",category:item.category||"",supplier:item.supplier||"",purchasePrice:item.purchasePrice||"",stockQuantity:item.stockQuantity||"",minimumStock:item.minimumStock||"",unit:item.unit||""});setModal({mode:"edit",data:item});}}>SỬA</button>
+                      <button style={{...S.btn("danger"),padding:"4px 10px"}} onClick={async()=>{if(!confirm("Xoá?"))return;try{await FS.delete("ingredients",item.id,token);await load();}catch(e){showToast(e.message,false);}}}>XOÁ</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {modal&&(
+        <Modal title={modal.mode==="add"?"THÊM NGUYÊN LIỆU":"SỬA NGUYÊN LIỆU"} onClose={()=>setModal(null)} width={500}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {[["name","TÊN"],["category","LOẠI"],["supplier","NHÀ CUNG CẤP"],["unit","ĐƠN VỊ"],["purchasePrice","GIÁ (₱)"],["stockQuantity","TỒN KHO"],["minimumStock","TỐI THIỂU"]].map(([k,l])=>(
+              <Field key={k} label={l}><input style={S.input} type={["purchasePrice","stockQuantity","minimumStock"].includes(k)?"number":"text"} value={form[k]} onChange={e=>setForm(p=>({...p,[k]:e.target.value}))}/></Field>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:8}}>
+            <button style={S.btn("ghost")} onClick={()=>setModal(null)}>HUỶ</button>
+            <button style={S.btn("primary")} onClick={save} disabled={saving}>{saving?"...":"LƯU"}</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// TAB 5 — INVENTORY LOGS
+// ─────────────────────────────────────────────────────
+function LogsTab({token,currentUser}) {
+  const [logs,setLogs]       = useState([]);
+  const [ings,setIngs]       = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [typeF,setTypeF]     = useState("all");
+  const [modal,setModal]     = useState(false);
+  const [form,setForm]       = useState({ingredientId:"",type:"import",quantity:"",reason:""});
+  const [saving,setSaving]   = useState(false);
+  const [toast,showToast]    = useToast();
+
+  const load = useCallback(async()=>{
+    try {
+      const [l,i]=await Promise.all([FS.list("stock_logs",token,150),FS.list("ingredients",token)]);
+      setLogs(l.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
+      setIngs(i);
+    } catch(e){showToast("Lỗi: "+e.message,false);}
+    finally{setLoading(false);}
+  },[token]);
+
+  useEffect(()=>{load();},[load]);
+
+  const filtered = logs.filter(l=>typeF==="all"||l.type===typeF);
+  const tsStr = ts=>{if(!ts)return"—";if(ts instanceof Date)return ts.toLocaleString("vi-VN");return new Date(ts).toLocaleString("vi-VN");};
+
+  const addLog = async()=>{
+    const ing=ings.find(i=>i.id===form.ingredientId);
+    if(!ing){showToast("Chọn nguyên liệu",false);return;}
+    setSaving(true);
+    const delta=["import","manual_adjustment"].includes(form.type)?+form.quantity:-+form.quantity;
+    const before=+(ing.stockQuantity||0);
+    try {
+      await FS.add("stock_logs",{ingredientId:ing.id,ingredientName:ing.name,type:form.type,quantity:+form.quantity,unit:ing.unit||"",beforeStock:before,afterStock:before+delta,reason:form.reason,createdBy:currentUser.name||"Admin",createdAt:new Date().toISOString()},token);
+      await FS.patch("ingredients",ing.id,{stockQuantity:before+delta,updatedAt:new Date().toISOString()},token);
+      await load(); setModal(false); setForm({ingredientId:"",type:"import",quantity:"",reason:""});
+      showToast("Đã ghi log ✓");
+    } catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  if(loading)return <Loader/>;
+  return (
+    <div>
+      {toast&&<Toast {...toast}/>}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <select style={{...S.input,width:"auto"}} value={typeF} onChange={e=>setTypeF(e.target.value)}>
+          {["all","import","usage","waste","manual_adjustment"].map(t=><option key={t} value={t}>{t==="all"?"Tất cả loại":t.replace("_"," ")}</option>)}
+        </select>
+        <button style={{...S.btn("primary"),marginLeft:"auto"}} onClick={()=>setModal(true)}>+ ĐIỀU CHỈNH KHO</button>
+      </div>
+      <div style={{...S.panel,padding:0,overflow:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
+          <thead><tr>{["Nguyên liệu","Loại","Thay đổi","Trước","Sau","Lý do","Người làm","Thời gian"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {filtered.map(log=>(
+              <tr key={log.id}>
+                <td style={S.td}><span style={{color:"#e2e8f0",fontWeight:600}}>{log.ingredientName}</span></td>
+                <td style={S.td}><span style={S.tag(log.type)}>{log.type?.replace("_"," ")}</span></td>
+                <td style={S.td}><span style={{color:["import","manual_adjustment"].includes(log.type)?"#4ade80":"#f87171",fontWeight:700}}>{["import","manual_adjustment"].includes(log.type)?"+":"-"}{log.quantity} {log.unit}</span></td>
+                <td style={S.td}>{log.beforeStock}</td>
+                <td style={S.td}>{log.afterStock}</td>
+                <td style={S.td}><span style={{color:"#94a3b8",fontSize:12}}>{log.reason}</span></td>
+                <td style={S.td}>{log.createdBy}</td>
+                <td style={S.td}><span style={{fontSize:10,color:"#64748b"}}>{tsStr(log.createdAt)}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {modal&&(
+        <Modal title="ĐIỀU CHỈNH KHO THỦ CÔNG" onClose={()=>setModal(false)}>
+          <Field label="NGUYÊN LIỆU">
+            <select style={S.input} value={form.ingredientId} onChange={e=>setForm(p=>({...p,ingredientId:e.target.value}))}>
+              <option value="">Chọn nguyên liệu...</option>
+              {ings.map(i=><option key={i.id} value={i.id}>{i.name} (tồn: {i.stockQuantity} {i.unit})</option>)}
+            </select>
+          </Field>
+          <Field label="LOẠI">
+            <select style={S.input} value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))}>
+              {["import","usage","waste","manual_adjustment"].map(t=><option key={t} value={t}>{t.replace("_"," ")}</option>)}
+            </select>
+          </Field>
+          <Field label="SỐ LƯỢNG"><input style={S.input} type="number" value={form.quantity} onChange={e=>setForm(p=>({...p,quantity:e.target.value}))}/></Field>
+          <Field label="LÝ DO"><input style={S.input} value={form.reason} onChange={e=>setForm(p=>({...p,reason:e.target.value}))}/></Field>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <button style={S.btn("ghost")} onClick={()=>setModal(false)}>HUỶ</button>
+            <button style={S.btn("primary")} onClick={addLog} disabled={saving}>{saving?"...":"LƯU"}</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// TAB 6 — ANALYTICS
+// ─────────────────────────────────────────────────────
+function AnalyticsTab({token}) {
+  const [orders,setOrders]   = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [period,setPeriod]   = useState("today");
+
+  const load = useCallback(async()=>{
+    try{setOrders(await FS.list("orders",token,300));}catch(e){}finally{setLoading(false);}
+  },[token]);
+
+  useEffect(()=>{load();const t=setInterval(load,30000);return()=>clearInterval(t);},[load]);
+
+  const todayStr = new Date().toDateString();
+  const display  = period==="today"?orders.filter(o=>new Date(o.createdAt).toDateString()===todayStr):orders;
+  const totalRev = display.reduce((s,o)=>s+(o.total||0),0);
+  const totalOrd = display.length;
+  const avgOrd   = totalOrd?totalRev/totalOrd:0;
+
+  const prodMap={};
+  display.forEach(o=>(o.items||[]).forEach(item=>{if(!prodMap[item.name])prodMap[item.name]={name:item.name,sales:0};prodMap[item.name].sales+=item.qty;}));
+  const topProds=Object.values(prodMap).sort((a,b)=>b.sales-a.sales).slice(0,5);
+
+  const hourMap={};
+  display.forEach(o=>{const h=new Date(o.createdAt).getHours();hourMap[h]=(hourMap[h]||0)+1;});
+  const hourly=Array.from({length:14},(_,i)=>{const h=i+8;return{hour:`${h}h`,orders:hourMap[h]||0};});
+
+  const payMap={};
+  display.forEach(o=>{const m=o.paymentMethod==="cash"?"Tiền mặt":"Chuyển khoản";payMap[m]=(payMap[m]||0)+1;});
+  const payData=Object.entries(payMap).map(([name,count])=>({name,value:Math.round((count/Math.max(totalOrd,1))*100)}));
+
+  const weekly=["T2","T3","T4","T5","T6","T7","CN"].map((_,i)=>{
+    const d=new Date();d.setDate(d.getDate()-6+i);
+    const ds=d.toDateString();const label=["T2","T3","T4","T5","T6","T7","CN"][i];
+    const dos=orders.filter(o=>new Date(o.createdAt).toDateString()===ds);
+    return{day:label,revenue:dos.reduce((s,o)=>s+(o.total||0),0),orders:dos.length};
+  });
+
+  if(loading)return <Loader/>;
+  return (
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+        {[["today","Hôm nay"],["all","Tất cả"]].map(([p,l])=>(
+          <button key={p} style={{...S.btn(period===p?"primary":"ghost"),padding:"6px 16px"}} onClick={()=>setPeriod(p)}>{l.toUpperCase()}</button>
+        ))}
+        <span style={{marginLeft:"auto",fontSize:11,color:"#4ade80",display:"flex",alignItems:"center",gap:6}}>● LIVE · {totalOrd} đơn</span>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
+        {[["DOANH THU",vnd(totalRev),"#eab308","📈"],["ĐƠN HÀNG",totalOrd,"#a855f7","🛒"],["TB/ĐƠN",vnd(avgOrd),"#22d3ee","🎯"]].map(([l,v,c,ico])=>(
+          <div key={l} style={{...S.card,textAlign:"center"}}>
+            <div style={{fontSize:20,marginBottom:4}}>{ico}</div>
+            <div style={{fontSize:9,color:"#64748b",letterSpacing:2,marginBottom:4}}>{l}</div>
+            <div style={{fontSize:17,fontWeight:900,color:c}}>{v}</div>
+          </div>
+        ))}
+        <div style={{...S.card,textAlign:"center"}}>
+          <div style={{fontSize:20,marginBottom:4}}>🏆</div>
+          <div style={{fontSize:9,color:"#64748b",letterSpacing:2,marginBottom:4}}>TOP MÓN</div>
+          <div style={{fontSize:13,fontWeight:900,color:"#4ade80"}}>{topProds[0]?.name||"—"}</div>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+        <div style={S.card}>
+          <div style={{fontSize:10,color:"#7c3aed",letterSpacing:2,marginBottom:12}}>DOANH THU 7 NGÀY</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={weekly}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1a0f3d"/>
+              <XAxis dataKey="day" stroke="#4c1d95" tick={{fill:"#64748b",fontSize:11}}/>
+              <YAxis stroke="#4c1d95" tick={{fill:"#64748b",fontSize:9}}/>
+              <Tooltip contentStyle={S.tip} formatter={v=>vnd(v)}/>
+              <Line type="monotone" dataKey="revenue" stroke="#eab308" strokeWidth={2} dot={{fill:"#eab308"}}/>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div style={S.card}>
+          <div style={{fontSize:10,color:"#7c3aed",letterSpacing:2,marginBottom:12}}>GIỜ CAO ĐIỂM HÔM NAY</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={hourly}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1a0f3d"/>
+              <XAxis dataKey="hour" stroke="#4c1d95" tick={{fill:"#64748b",fontSize:10}}/>
+              <YAxis stroke="#4c1d95" tick={{fill:"#64748b",fontSize:11}}/>
+              <Tooltip contentStyle={S.tip}/>
+              <Bar dataKey="orders" fill="#7c3aed" radius={[4,4,0,0]}/>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:14}}>
+        <div style={S.card}>
+          <div style={{fontSize:10,color:"#7c3aed",letterSpacing:2,marginBottom:12}}>TOP SẢN PHẨM</div>
+          {topProds.length===0?<div style={{color:"#64748b",fontSize:12,textAlign:"center",padding:20}}>Chưa có đơn nào</div>
+            :<ResponsiveContainer width="100%" height={180}>
+              <BarChart data={topProds} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a0f3d"/>
+                <XAxis type="number" stroke="#4c1d95" tick={{fill:"#64748b",fontSize:10}}/>
+                <YAxis dataKey="name" type="category" width={130} stroke="#4c1d95" tick={{fill:"#94a3b8",fontSize:10}}/>
+                <Tooltip contentStyle={S.tip}/>
+                <Bar dataKey="sales" fill="#a855f7" radius={[0,4,4,0]}/>
+              </BarChart>
+            </ResponsiveContainer>
+          }
+        </div>
+        <div style={S.card}>
+          <div style={{fontSize:10,color:"#7c3aed",letterSpacing:2,marginBottom:12}}>THANH TOÁN</div>
+          {payData.length===0?<div style={{color:"#64748b",fontSize:12,textAlign:"center",padding:20}}>Chưa có dữ liệu</div>
+            :<>
+              <ResponsiveContainer width="100%" height={130}>
+                <PieChart><Pie data={payData} cx="50%" cy="50%" innerRadius={32} outerRadius={56} dataKey="value">
+                  {payData.map((_,i)=><Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]}/>)}
+                </Pie><Tooltip contentStyle={S.tip}/></PieChart>
+              </ResponsiveContainer>
+              {payData.map((d,i)=>(
+                <div key={d.name} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,marginTop:6}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:PIE_COLORS[i%PIE_COLORS.length]}}/>
+                  <span style={{color:"#94a3b8",flex:1}}>{d.name}</span>
+                  <span style={{color:"#e2e8f0",fontWeight:700}}>{d.value}%</span>
+                </div>
+              ))}
+            </>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// TAB 7 — SETTINGS
+// ─────────────────────────────────────────────────────
+function SettingsTab({token,currentUser}) {
+  const [cfg,setCfg]         = useState(null);
+  const [loading,setLoading] = useState(true);
+  const [saved,setSaved]     = useState(false);
+  const [saving,setSaving]   = useState(false);
+  const [toast,showToast]    = useToast();
+
+  useEffect(()=>{
+    FS.get("settings","main",token).then(d=>{
+      setCfg(d||{storeName:"AFK HUB",currency:"VND",discordWebhook:"",lowStockNotify:true,autoDeductStock:true,timezone:"Asia/Ho_Chi_Minh"});
+      setLoading(false);
+    }).catch(()=>setLoading(false));
+  },[token]);
+
+  if(currentUser.role!=="owner")return(
+    <div style={{textAlign:"center",padding:60}}>
+      <div style={{fontSize:48,marginBottom:12}}>🔒</div>
+      <div style={{color:"#f87171",fontSize:13,letterSpacing:2}}>CHỈ OWNER MỚI TRUY CẬP</div>
+    </div>
+  );
+  if(loading)return <Loader/>;
+
+  const save = async()=>{
+    setSaving(true);
+    try{await FS.set("settings","main",{...cfg,updatedAt:new Date().toISOString()},token);setSaved(true);setTimeout(()=>setSaved(false),2000);}
+    catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  return (
+    <div style={{maxWidth:560}}>
+      {toast&&<Toast {...toast}/>}
+      <div style={S.panel}>
+        <div style={{fontSize:11,color:"#a855f7",letterSpacing:2,marginBottom:16}}>CẤU HÌNH CỬA HÀNG</div>
+        {[["storeName","TÊN CỬA HÀNG"],["currency","ĐƠN VỊ TIỀN"],["discordWebhook","DISCORD WEBHOOK URL"],["timezone","MÚI GIỜ"]].map(([k,l])=>(
+          <Field key={k} label={l}><input style={S.input} value={cfg[k]||""} onChange={e=>setCfg(p=>({...p,[k]:e.target.value}))}/></Field>
+        ))}
+      </div>
+      <div style={S.panel}>
+        <div style={{fontSize:11,color:"#a855f7",letterSpacing:2,marginBottom:16}}>TỰ ĐỘNG HÓA</div>
+        {[["lowStockNotify","Cảnh báo khi kho thấp"],["autoDeductStock","Tự trừ kho khi đơn hoàn thành"]].map(([k,l])=>(
+          <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <span style={{fontSize:13,color:"#cbd5e1"}}>{l}</span>
+            <Toggle value={cfg[k]} onChange={()=>setCfg(p=>({...p,[k]:!p[k]}))}/>
+          </div>
+        ))}
+      </div>
+      <button style={{...S.btn("primary"),padding:"12px 32px"}} onClick={save} disabled={saving}>
+        {saving?"ĐANG LƯU...":saved?"✔ ĐÃ LƯU!":"LƯU CÀI ĐẶT"}
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// LOGIN
+// ─────────────────────────────────────────────────────
+function LoginScreen({onLogin,error,loading}) {
+  const [email,setEmail]       = useState("");
+  const [password,setPassword] = useState("");
+  return (
+    <div style={{...S.wrap,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden",minHeight:"100vh"}}>
+      <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(124,58,237,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,.07) 1px,transparent 1px)",backgroundSize:"40px 40px",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at center,rgba(124,58,237,.12) 0%,transparent 70%)",pointerEvents:"none"}}/>
+      <div style={{...S.panel,width:390,position:"relative",zIndex:1,boxShadow:"0 0 60px rgba(124,58,237,.25)",marginBottom:0}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:13,letterSpacing:6,color:"#a855f7",marginBottom:4}}>◈ AFK HUB ◈</div>
+          <div style={{fontSize:22,fontWeight:900,background:"linear-gradient(135deg,#a855f7,#eab308)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:2}}>ADMIN PORTAL</div>
+          <div style={{height:2,background:"linear-gradient(90deg,transparent,#a855f7,#eab308,transparent)",marginTop:10}}/>
+        </div>
+        <Field label="EMAIL">
+          <input style={S.input} value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="admin@afkhub.com" onKeyDown={e=>e.key==="Enter"&&onLogin(email,password)}/>
+        </Field>
+        <Field label="MẬT KHẨU">
+          <input style={S.input} value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&onLogin(email,password)}/>
+        </Field>
+        {error&&<div style={{background:"rgba(127,29,29,.4)",border:"1px solid #7f1d1d",borderRadius:8,padding:"8px 14px",color:"#f87171",fontSize:12,marginBottom:14}}>{error}</div>}
+        <button style={{...S.btn("primary"),width:"100%",padding:"13px",fontSize:13}} onClick={()=>onLogin(email,password)} disabled={loading}>
+          {loading?"⏳ ĐANG XÁC THỰC...":"🔐 VÀO ADMIN"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// TABS CONFIG
+// ─────────────────────────────────────────────────────
+const TABS = [
+  {id:"orders",      label:"📋 Đơn Hàng",     perm:"orders"},
+  {id:"menu",        label:"🍵 Quản Lý Menu",  perm:"menu"},
+  {id:"employees",   label:"👥 Nhân Viên",     perm:"employees"},
+  {id:"ingredients", label:"🧪 Nguyên Liệu",  perm:"ingredients"},
+  {id:"logs",        label:"📦 Kho Hàng",      perm:"logs"},
+  {id:"analytics",   label:"📊 Analytics",     perm:"analytics"},
+  {id:"settings",    label:"⚙ Cài Đặt",        perm:"settings"},
+];
+
+// ─────────────────────────────────────────────────────
+// MAIN APP
+// ─────────────────────────────────────────────────────
+function App() {
+  // session: {idToken, refreshToken, uid, expiresAt, employee}
+  const [session,setSession]   = useState(()=>{
+    try{const s=sessionStorage.getItem("afk_admin");return s?JSON.parse(s):null;}catch{return null;}
+  });
+  const [authInit,setAuthInit] = useState(true);
+  const [loginErr,setLoginErr] = useState("");
+  const [loginLoad,setLoginLoad]=useState(false);
+  const [activeTab,setActiveTab]=useState("orders");
+
+  // Kiểm tra session còn hạn
+  useEffect(()=>{
+    (async()=>{
+      if(!session){setAuthInit(false);return;}
+      // Refresh token nếu sắp hết hạn
+      if(Date.now()>session.expiresAt-60000){
+        try {
+          const {idToken,refreshToken,expiresAt}=await Auth.refresh(session.refreshToken);
+          const next={...session,idToken,refreshToken,expiresAt};
+          setSession(next); sessionStorage.setItem("afk_admin",JSON.stringify(next));
+        } catch { logout(); }
+      }
+      setAuthInit(false);
+    })();
+  },[]);
+
+  const handleLogin = async(email,password)=>{
+    setLoginLoad(true); setLoginErr("");
+    try {
+      const {idToken,refreshToken,uid,expiresAt}=await Auth.login(email,password);
+      // Lấy employee profile
+      const emp=await FS.get("employees",uid,idToken);
+      if(!emp||emp.active===false){
+        setLoginErr("Tài khoản chưa được cấp quyền admin. Hãy thêm vào collection 'employees' trong Firestore.");
+        setLoginLoad(false); return;
+      }
+      const s={idToken,refreshToken,uid,expiresAt,employee:emp};
+      setSession(s); sessionStorage.setItem("afk_admin",JSON.stringify(s));
+    } catch(e){setLoginErr(e.message);}
+    setLoginLoad(false);
+  };
+
+  const logout=()=>{setSession(null);sessionStorage.removeItem("afk_admin");};
+
+  if(authInit)return(
+    <div style={{...S.wrap,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
+      <div style={{color:"#7c3aed",letterSpacing:4,fontSize:13}}>ĐANG KHỞI ĐỘNG...</div>
+    </div>
+  );
+
+  if(!session?.employee)return <LoginScreen onLogin={handleLogin} error={loginErr} loading={loginLoad}/>;
+
+  const {idToken,employee}=session;
+  const perms       = ROLE_PERMISSIONS[employee.role]||[];
+  const allowedTabs = TABS.filter(t=>perms.includes(t.perm));
+  const curTab      = allowedTabs.find(t=>t.id===activeTab)?activeTab:allowedTabs[0]?.id;
+
+  return (
+    <div style={S.wrap}>
+      <div style={{position:"fixed",inset:0,backgroundImage:"linear-gradient(rgba(124,58,237,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,.04) 1px,transparent 1px)",backgroundSize:"40px 40px",pointerEvents:"none",zIndex:0}}/>
+
+      {/* Header */}
+      <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(10,8,20,.97)",backdropFilter:"blur(12px)",borderBottom:"1px solid #2d1b69",padding:"0 24px",display:"flex",alignItems:"center",gap:12,height:56}}>
+        <div style={{fontSize:16,fontWeight:900,background:"linear-gradient(135deg,#a855f7,#eab308)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:3}}>AFK HUB</div>
+        <div style={{fontSize:10,color:"#4c1d95",letterSpacing:2}}>ADMIN</div>
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:12,color:"#94a3b8"}}>{employee.name}</span>
+          <span style={S.badge(employee.role)}>{employee.role}</span>
+          <button style={{...S.btn("ghost"),padding:"4px 12px",fontSize:11}} onClick={logout}>LOGOUT</button>
+        </div>
+      </div>
+
+      <div style={{display:"flex",minHeight:"calc(100vh - 56px)",position:"relative",zIndex:1}}>
+        {/* Sidebar */}
+        <div style={{width:205,background:"rgba(10,8,20,.85)",borderRight:"1px solid #2d1b69",padding:"16px 0",flexShrink:0}}>
+          {allowedTabs.map(tab=>(
+            <div key={tab.id} onClick={()=>setActiveTab(tab.id)} style={{
+              padding:"11px 18px",cursor:"pointer",fontSize:11,letterSpacing:1,
+              color:curTab===tab.id?"#eab308":"#64748b",
+              background:curTab===tab.id?"rgba(234,179,8,.08)":"transparent",
+              borderLeft:curTab===tab.id?"3px solid #eab308":"3px solid transparent",
+              transition:".15s",fontWeight:curTab===tab.id?700:400,
+            }}>{tab.label}</div>
+          ))}
+          <div style={{margin:"16px 10px 0",padding:10,background:"rgba(124,58,237,.08)",border:"1px solid #2d1b69",borderRadius:8}}>
+            <div style={{fontSize:8,color:"#4c1d95",letterSpacing:2,marginBottom:5}}>QUYỀN TRUY CẬP</div>
+            {perms.map(p=><div key={p} style={{fontSize:9,color:"#64748b",marginBottom:2}}>✔ {p}</div>)}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{flex:1,padding:24,overflowY:"auto"}}>
+          <div style={{fontSize:17,fontWeight:900,color:"#e2e8f0",letterSpacing:2,marginBottom:4}}>
+            {TABS.find(t=>t.id===curTab)?.label}
+          </div>
+          <div style={{height:2,background:"linear-gradient(90deg,#7c3aed,transparent)",marginBottom:20,width:200}}/>
+
+          {curTab==="orders"      && <OrdersTab     token={idToken}/>}
+          {curTab==="menu"        && <MenuTab        token={idToken}/>}
+          {curTab==="employees"   && <EmployeesTab   token={idToken} currentUser={employee}/>}
+          {curTab==="ingredients" && <IngredientsTab token={idToken}/>}
+          {curTab==="logs"        && <LogsTab        token={idToken} currentUser={employee}/>}
+          {curTab==="analytics"   && <AnalyticsTab   token={idToken}/>}
+          {curTab==="settings"    && <SettingsTab    token={idToken} currentUser={employee}/>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
