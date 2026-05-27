@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<meta name="theme-color" content="#0a0714"/>
+<title>AFK HUB — Admin Control</title>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.9/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0714;font-family:'Courier New',monospace;overflow-x:hidden;color:#fff}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#0a0714}::-webkit-scrollbar-thumb{background:#9333ea;border-radius:2px}
+@keyframes gG{0%,100%{box-shadow:0 0 8px rgba(234,179,8,.5),0 0 20px rgba(234,179,8,.2)}50%{box-shadow:0 0 18px rgba(234,179,8,.9),0 0 45px rgba(234,179,8,.4)}}
+@keyframes gP{0%,100%{box-shadow:0 0 8px rgba(147,51,234,.4)}50%{box-shadow:0 0 20px rgba(147,51,234,.8)}}
+@keyframes fU{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sU{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes sL{0%{transform:translateY(-100vh)}100%{transform:translateY(100vh)}}
+@keyframes sp{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes blink{0%,100%{opacity:1}49%{opacity:1}50%{opacity:0}99%{opacity:0}}
+.gg{animation:gG 2s ease-in-out infinite}
+.gp{animation:gP 2s ease-in-out infinite}
+.fu{animation:fU .35s ease forwards}
+.sp{animation:sp 1s linear infinite}
+.pulse{animation:pulse 2s ease-in-out infinite}
+.blink{animation:blink 1.2s step-end infinite}
+.gl{background:rgba(255,255,255,.04);backdrop-filter:blur(12px);border:1px solid rgba(147,51,234,.2)}
+.glg{background:rgba(234,179,8,.06);backdrop-filter:blur(12px);border:1px solid rgba(234,179,8,.25)}
+.glr{background:rgba(239,68,68,.06);backdrop-filter:blur(12px);border:1px solid rgba(239,68,68,.25)}
+.gls{background:rgba(34,197,94,.06);backdrop-filter:blur(12px);border:1px solid rgba(34,197,94,.25)}
+.cy{background-image:linear-gradient(rgba(147,51,234,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(147,51,234,.04) 1px,transparent 1px);background-size:40px 40px}
+.tg{color:#eab308;text-shadow:0 0 12px rgba(234,179,8,.55)}
+.tp{color:#a855f7}
+.tr{color:#ef4444}
+.ts{color:#22c55e}
+input,select,textarea{background:rgba(255,255,255,.05);border:1px solid rgba(147,51,234,.3);color:#fff;outline:none;font-family:'Courier New',monospace;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:#9333ea;box-shadow:0 0 12px rgba(147,51,234,.2)}
+select option{background:#120a2e;color:#fff}
+.bb{background:linear-gradient(135deg,#eab308,#f59e0b);color:#0a0714;font-weight:900;border:none;cursor:pointer;transition:all .2s;font-family:'Courier New',monospace;letter-spacing:1px;text-transform:uppercase}
+.bb:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(234,179,8,.4)}
+.bb:active{transform:translateY(0)}
+.bb:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.gb{background:transparent;border:1px solid rgba(147,51,234,.45);color:#a855f7;cursor:pointer;transition:all .2s;font-family:'Courier New',monospace}
+.gb:hover{border-color:#a855f7;background:rgba(147,51,234,.1)}
+.rb{background:transparent;border:1px solid rgba(239,68,68,.4);color:#ef4444;cursor:pointer;transition:all .2s;font-family:'Courier New',monospace}
+.rb:hover{background:rgba(239,68,68,.1)}
+.sb{background:transparent;border:1px solid rgba(34,197,94,.4);color:#22c55e;cursor:pointer;transition:all .2s;font-family:'Courier New',monospace}
+.sb:hover{background:rgba(34,197,94,.1)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useRef,useMemo}=React;
+
+// ─── FIREBASE CONFIG (same as ordering app) ───
+const FB    = "https://firestore.googleapis.com/v1/projects/afk-hub/databases/(default)/documents";
+const FBKEY = "AIzaSyAiDeA-B1wSCMEZ9FguSKHBjH3653JAwJA";
+const FB_AUTH = "https://identitytoolkit.googleapis.com/v1";
+const FB_AUTH_KEY = FBKEY;
+const DSC   = "https://discord.com/api/webhooks/1507371598280396831/ieKValC7Jha84Z5HWWBgXBFXNFA-IBvKF7AdcDfk4-2ZdCADOMiVjSZFhJoWv_158vfs";
+
+// ─── CONSTANTS ───
+const STATUS_COLS  = ["pending","preparing","ready","completed"];
+const STATUS_LABEL = {pending:"⏳ Chờ",preparing:"🔥 Đang pha",ready:"✅ Xong",completed:"🏁 Hoàn thành"};
+const STATUS_COLOR = {pending:"#eab308",preparing:"#f97316",ready:"#22c55e",completed:"#4b5563"};
+const STATUS_NEXT  = {pending:"preparing",preparing:"ready",ready:"completed"};
+const ROLES = ["owner","manager","staff"];
+const ROLE_COLOR = {owner:"#eab308",manager:"#a855f7",staff:"#22c55e"};
+const UNITS = ["g","kg","ml","l","cup","gói","hộp","chai","lon","cái"];
+const LOG_TYPES = ["import","usage","waste","manual_adjustment"];
+const LOG_TYPE_LABEL = {import:"📦 Nhập kho",usage:"🔥 Sử dụng",waste:"🗑️ Hao hụt",manual_adjustment:"✏️ Điều chỉnh"};
+const vnd = n => (n||0).toLocaleString("vi-VN")+"đ";
+const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+
+// ─── FIRESTORE HELPERS ───
+async function fsGet(col, id="") {
+  const url = id ? `${FB}/${col}/${id}?key=${FBKEY}` : `${FB}/${col}?key=${FBKEY}&pageSize=500`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (id) return data;
+  return data.documents || [];
+}
+
+async function fsPatch(col, id, fields) {
+  const mask = Object.keys(fields).map(k=>`updateMask.fieldPaths=${k}`).join("&");
+  const res = await fetch(`${FB}/${col}/${id}?${mask}&key=${FBKEY}`, {
+    method:"PATCH", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({fields}),
+  });
+  return res.json();
+}
+
+async function fsPost(col, fields) {
+  const res = await fetch(`${FB}/${col}?key=${FBKEY}`, {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({fields}),
+  });
+  return res.json();
+}
+
+async function fsDelete(col, id) {
+  await fetch(`${FB}/${col}/${id}?key=${FBKEY}`, {method:"DELETE"});
+}
+
+// Value converters
+const toSV = v => ({stringValue: String(v||"")});
+const toIV = v => ({integerValue: String(parseInt(v)||0)});
+const toFV = v => ({doubleValue: parseFloat(v)||0});
+const toBV = v => ({booleanValue: Boolean(v)});
+const toAV = arr => ({arrayValue:{values: arr.map(toMapV)}});
+const toMapV = obj => {
+  const fields={};
+  Object.entries(obj).forEach(([k,v])=>{
+    if (typeof v==="number") fields[k]=Number.isInteger(v)?toIV(v):toFV(v);
+    else if (typeof v==="boolean") fields[k]=toBV(v);
+    else fields[k]=toSV(v);
+  });
+  return {mapValue:{fields}};
+};
+
+function getF(fields={}, key) {
+  const f = fields[key];
+  if (!f) return undefined;
+  if (f.stringValue !== undefined) return f.stringValue;
+  if (f.integerValue !== undefined) return parseInt(f.integerValue);
+  if (f.doubleValue !== undefined) return parseFloat(f.doubleValue);
+  if (f.booleanValue !== undefined) return f.booleanValue;
+  if (f.arrayValue) return (f.arrayValue.values||[]).map(v=>{
+    if (v.mapValue) return Object.fromEntries(Object.entries(v.mapValue.fields||{}).map(([k,val])=>[k, getF({[k]:val},k)]));
+    return getF({_:v},"_");
+  });
+  if (f.mapValue) return Object.fromEntries(Object.entries(f.mapValue.fields||{}).map(([k,v])=>[k,getF({[k]:v},k)]));
+  return undefined;
+}
+
+function parseDoc(doc) {
+  const f = doc.fields || {};
+  const id = doc.name?.split("/").pop() || "";
+  const out = {_id: id};
+  Object.keys(f).forEach(k => { out[k] = getF(f, k); });
+  return out;
+}
+
+// ─── AUTH HELPERS ───
+const AUTH_KEY = "afk_admin_session";
+function saveSession(data) { try { localStorage.setItem(AUTH_KEY, JSON.stringify(data)); } catch {} }
+function loadSession() { try { return JSON.parse(localStorage.getItem(AUTH_KEY)||"null"); } catch { return null; } }
+function clearSession() { try { localStorage.removeItem(AUTH_KEY); } catch {} }
+
+async function signInEmail(email, password) {
+  const res = await fetch(`${FB_AUTH}/accounts:signInWithPassword?key=${FB_AUTH_KEY}`, {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({email, password, returnSecureToken:true}),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data;
+}
+
+async function getEmployeeByUid(uid) {
+  try {
+    const docs = await fsGet("employees");
+    const emp = docs.map(parseDoc).find(e => e.uid === uid);
+    return emp || null;
+  } catch { return null; }
+}
+
+// ─── MICRO COMPONENTS ───
+function Scanline() {
+  return <div style={{position:"fixed",top:0,left:0,right:0,height:"2px",background:"linear-gradient(transparent,rgba(147,51,234,.1),transparent)",animation:"sL 6s linear infinite",pointerEvents:"none",zIndex:9999}}/>;
+}
+
+function Corner({sz=8, c="#9333ea"}) {
+  const b=(t,r,b2,l)=>({position:"absolute",width:sz,height:sz,pointerEvents:"none",
+    borderTop:t?`1px solid ${c}`:undefined, borderRight:r?`1px solid ${c}`:undefined,
+    borderBottom:b2?`1px solid ${c}`:undefined, borderLeft:l?`1px solid ${c}`:undefined});
+  return (
+    <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
+      <div style={{...b(1,0,0,1),top:0,left:0}}/><div style={{...b(1,1,0,0),top:0,right:0}}/>
+      <div style={{...b(0,0,1,1),bottom:0,left:0}}/><div style={{...b(0,1,1,0),bottom:0,right:0}}/>
+    </div>
+  );
+}
+
+function Toast({msg,ok=true,onDone}) {
+  useEffect(()=>{const t=setTimeout(onDone,3500);return()=>clearTimeout(t);},[onDone]);
+  return (
+    <div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:9998,whiteSpace:"nowrap",
+      background:ok?"rgba(34,197,94,.15)":"rgba(239,68,68,.15)",
+      border:`1px solid ${ok?"rgba(34,197,94,.5)":"rgba(239,68,68,.5)"}`,
+      backdropFilter:"blur(12px)",borderRadius:10,padding:"10px 18px",fontSize:11,fontWeight:700,
+      color:ok?"#22c55e":"#ef4444",boxShadow:`0 0 20px ${ok?"rgba(34,197,94,.3)":"rgba(239,68,68,.3)"}`}}>
+      {msg}
+    </div>
+  );
+}
+
+function useToast() {
+  const [toast,setToast]=useState(null);
+  const show=(msg,ok=true)=>setToast({msg,ok,k:Date.now()});
+  const el = toast ? <Toast key={toast.k} msg={toast.msg} ok={toast.ok} onDone={()=>setToast(null)}/> : null;
+  return [show, el];
+}
+
+function Spinner() {
+  return <div className="sp" style={{width:18,height:18,border:"2px solid rgba(234,179,8,.2)",borderTop:"2px solid #eab308",borderRadius:"50%"}}/>;
+}
+
+function Badge({color,children}) {
+  return <span style={{background:`${color}18`,color,border:`1px solid ${color}40`,borderRadius:4,padding:"1px 7px",fontSize:9,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{children}</span>;
+}
+
+function StatCard({label,value,sub,color="#eab308",icon}) {
+  return (
+    <div className="gl fu" style={{borderRadius:10,padding:"13px 14px",position:"relative"}}>
+      <Corner sz={6} c={color}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div>
+          <div style={{fontSize:8,color:"#64748b",letterSpacing:2,marginBottom:4}}>{label}</div>
+          <div style={{fontWeight:900,fontSize:20,color}}>{value}</div>
+          {sub && <div style={{fontSize:9,color:"#475569",marginTop:2}}>{sub}</div>}
+        </div>
+        {icon && <div style={{fontSize:22,opacity:.7}}>{icon}</div>}
+      </div>
+    </div>
+  );
+}
+
+function Modal({title,onClose,children,wide=false}) {
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:700,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(6px)"}}/>
+      <div style={{position:"relative",zIndex:1,background:"#120a2e",borderRadius:14,border:"1px solid rgba(147,51,234,.4)",
+        padding:20,width:"100%",maxWidth:wide?640:420,maxHeight:"90vh",overflow:"auto"}}>
+        <Corner sz={9} c="#9333ea"/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <span className="tg" style={{fontWeight:900,fontSize:13,letterSpacing:1}}>{title}</span>
+          <button onClick={onClose} className="gb" style={{padding:"4px 8px",borderRadius:6}}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Field({label,children}) {
+  return (
+    <div>
+      <div style={{fontSize:9,color:"#64748b",letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function Input({...props}) {
+  return <input {...props} style={{width:"100%",padding:"9px 12px",borderRadius:8,fontSize:12,...props.style}}/>;
+}
+
+function Select({children,...props}) {
+  return <select {...props} style={{width:"100%",padding:"9px 12px",borderRadius:8,fontSize:12,...props.style}}>{children}</select>;
+}
+
+// ─── LOGIN PAGE ───
+function LoginPage({onLogin}) {
+  const [email,setEmail]=useState("");
+  const [pass,setPass]=useState("");
+  const [err,setErr]=useState("");
+  const [loading,setLoading]=useState(false);
+
+  const submit = async () => {
+    setErr(""); setLoading(true);
+    try {
+      const auth = await signInEmail(email, pass);
+      const emp = await getEmployeeByUid(auth.localId);
+      if (!emp) { setErr("Tài khoản không được cấp quyền admin."); setLoading(false); return; }
+      if (!emp.active) { setErr("Tài khoản đã bị vô hiệu hoá."); setLoading(false); return; }
+      const session = {uid:auth.localId, email:auth.email, token:auth.idToken, role:emp.role, name:emp.name, employeeId:emp._id};
+      saveSession(session);
+      onLogin(session);
+    } catch(e) {
+      setErr(e.message === "INVALID_LOGIN_CREDENTIALS" ? "Email hoặc mật khẩu không đúng." : e.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="cy" style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      background:"radial-gradient(ellipse at center,#1a0a3e 0%,#0a0714 70%)",padding:24}}>
+      <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",background:"rgba(147,51,234,.07)",top:"5%",left:"-20%",filter:"blur(60px)"}}/>
+      <div style={{position:"absolute",width:250,height:250,borderRadius:"50%",background:"rgba(234,179,8,.05)",bottom:"5%",right:"-10%",filter:"blur(50px)"}}/>
+
+      <div className="fu" style={{width:"100%",maxWidth:360}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div className="tg" style={{fontSize:24,fontWeight:900,letterSpacing:4,marginBottom:4}}>AFK CONTROL</div>
+          <div style={{fontSize:9,letterSpacing:4,color:"rgba(147,51,234,.6)"}}>ADMIN SYSTEM v2.0</div>
+        </div>
+
+        <div className="gl" style={{borderRadius:14,padding:22,position:"relative"}}>
+          <Corner sz={9} c="#9333ea"/>
+          <div style={{display:"flex",flexDirection:"column",gap:13}}>
+            <Field label="Email">
+              <Input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@afkhub.vn"
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            </Field>
+            <Field label="Mật khẩu">
+              <Input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••"
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            </Field>
+            {err && <div style={{fontSize:10,color:"#ef4444",textAlign:"center",padding:"7px",background:"rgba(239,68,68,.1)",borderRadius:7,border:"1px solid rgba(239,68,68,.3)"}}>{err}</div>}
+            <button onClick={submit} disabled={loading} className="bb gg"
+              style={{padding:"13px",borderRadius:10,fontSize:13,letterSpacing:2,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              {loading ? <><Spinner/> ĐANG ĐĂNG NHẬP...</> : "⚡ ĐĂNG NHẬP"}
+            </button>
+          </div>
+        </div>
+
+        <div style={{textAlign:"center",marginTop:16,fontSize:9,color:"rgba(147,51,234,.3)",letterSpacing:2}}>
+          AFK HUB INTERNAL SYSTEM · UNAUTHORIZED ACCESS PROHIBITED
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SIDEBAR ───
+const NAV_ITEMS = [
+  {id:"dashboard",icon:"📊",label:"Dashboard"},
+  {id:"orders",icon:"📋",label:"Đơn hàng"},
+  {id:"employees",icon:"👥",label:"Nhân viên"},
+  {id:"ingredients",icon:"🧪",label:"Nguyên liệu"},
+  {id:"recipes",icon:"📖",label:"Công thức"},
+  {id:"inventory",icon:"📦",label:"Kho hàng"},
+  {id:"analytics",icon:"📈",label:"Phân tích"},
+  {id:"reports",icon:"📄",label:"Báo cáo"},
+  {id:"settings",icon:"⚙️",label:"Cài đặt"},
+];
+
+const ROLE_ACCESS = {
+  owner:   ["dashboard","orders","employees","ingredients","recipes","inventory","analytics","reports","settings"],
+  manager: ["dashboard","orders","ingredients","recipes","inventory","analytics","reports"],
+  staff:   ["orders"],
+};
+
+function Sidebar({active, onNav, session, onLogout, collapsed, onToggle}) {
+  const allowed = ROLE_ACCESS[session.role] || ["orders"];
+  return (
+    <div style={{width:collapsed?56:200,flexShrink:0,background:"rgba(10,7,20,.98)",borderRight:"1px solid rgba(147,51,234,.2)",
+      display:"flex",flexDirection:"column",minHeight:"100vh",transition:"width .25s ease",overflow:"hidden"}}>
+      {/* Header */}
+      <div style={{padding:"14px 12px",borderBottom:"1px solid rgba(147,51,234,.15)",display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:56}}>
+        {!collapsed && <span className="tg" style={{fontWeight:900,fontSize:12,letterSpacing:2,whiteSpace:"nowrap"}}>AFK ADMIN</span>}
+        <button onClick={onToggle} className="gb" style={{padding:"5px 7px",borderRadius:6,fontSize:12,flexShrink:0,marginLeft:collapsed?0:"auto"}}>
+          {collapsed?"→":"←"}
+        </button>
+      </div>
+
+      {/* Nav */}
+      <nav style={{flex:1,padding:"8px 6px",display:"flex",flexDirection:"column",gap:2}}>
+        {NAV_ITEMS.filter(n=>allowed.includes(n.id)).map(n=>{
+          const isActive = active===n.id;
+          return (
+            <button key={n.id} onClick={()=>onNav(n.id)} style={{
+              width:"100%",padding:collapsed?"10px":"9px 11px",borderRadius:8,display:"flex",
+              alignItems:"center",gap:8,cursor:"pointer",border:"none",textAlign:"left",
+              background:isActive?"linear-gradient(135deg,rgba(234,179,8,.15),rgba(234,179,8,.05))":"transparent",
+              borderLeft:isActive?"2px solid #eab308":"2px solid transparent",
+              color:isActive?"#eab308":"#64748b",transition:"all .15s",justifyContent:collapsed?"center":"flex-start",
+              fontFamily:"'Courier New',monospace",
+            }}>
+              <span style={{fontSize:14,flexShrink:0}}>{n.icon}</span>
+              {!collapsed && <span style={{fontSize:10,fontWeight:isActive?700:400,letterSpacing:1,whiteSpace:"nowrap"}}>{n.label}</span>}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* User */}
+      <div style={{padding:"10px 8px",borderTop:"1px solid rgba(147,51,234,.15)"}}>
+        {!collapsed && (
+          <div style={{marginBottom:8,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#f1f5f9",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{session.name}</div>
+            <Badge color={ROLE_COLOR[session.role]||"#9333ea"}>{session.role}</Badge>
+          </div>
+        )}
+        <button onClick={onLogout} className="rb" style={{width:"100%",padding:collapsed?"8px":"7px 10px",borderRadius:7,fontSize:9,letterSpacing:1,display:"flex",alignItems:"center",gap:5,justifyContent:"center"}}>
+          <span>🚪</span>{!collapsed&&"ĐĂNG XUẤT"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ───
+function Dashboard({session}) {
+  const [orders,setOrders]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [ingrs,setIngrs]=useState([]);
+
+  const load = useCallback(async()=>{
+    setLoading(true);
+    const [oDocs, iDocs] = await Promise.all([fsGet("orders"), fsGet("ingredients")]);
+    setOrders(oDocs.map(parseDoc).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
+    setIngrs(iDocs.map(parseDoc));
+    setLoading(false);
+  },[]);
+
+  useEffect(()=>{load();const t=setInterval(load,20000);return()=>clearInterval(t);},[load]);
+
+  const today = useMemo(()=>{
+    const t=new Date().toDateString();
+    return orders.filter(o=>new Date(o.createdAt).toDateString()===t);
+  },[orders]);
+
+  const todayRev = useMemo(()=>today.filter(o=>o.status!=="pending").reduce((s,o)=>s+(o.total||0),0),[today]);
+  const pending  = orders.filter(o=>o.status==="pending").length;
+  const prep     = orders.filter(o=>o.status==="preparing").length;
+  const lowStock = ingrs.filter(i=>i.stockQuantity<=i.minimumStock);
+  const recent   = orders.slice(0,8);
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div className="tg" style={{fontWeight:900,fontSize:16,letterSpacing:2}}>DASHBOARD</div>
+          <div style={{fontSize:9,color:"#475569",letterSpacing:1}}>Xin chào, {session.name} · <span className="blink" style={{color:"#22c55e"}}>●</span> LIVE</div>
+        </div>
+        <button onClick={load} className="gb" style={{padding:"6px 10px",borderRadius:7,fontSize:10,display:"flex",alignItems:"center",gap:5}}>
+          {loading?<Spinner/>:"🔄"} Refresh
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
+        <StatCard label="Doanh thu hôm nay" value={vnd(todayRev)} sub={`${today.length} đơn`} icon="💰"/>
+        <StatCard label="Đơn đang chờ" value={pending+prep} sub={`${pending} chờ · ${prep} pha`} color="#f97316" icon="⏳"/>
+        <StatCard label="Tổng đơn" value={orders.length} sub="Tất cả thời gian" color="#a855f7" icon="📋"/>
+        <StatCard label="Cảnh báo kho" value={lowStock.length} sub="Nguyên liệu sắp hết" color={lowStock.length>0?"#ef4444":"#22c55e"} icon="⚠️"/>
+      </div>
+
+      {/* Low stock alerts */}
+      {lowStock.length>0 && (
+        <div className="glr" style={{borderRadius:10,padding:12,position:"relative"}}>
+          <Corner sz={7} c="#ef4444"/>
+          <div style={{fontSize:9,color:"#ef4444",letterSpacing:2,marginBottom:8,fontWeight:700}}>⚠️ NGUYÊN LIỆU SẮP HẾT</div>
+          {lowStock.slice(0,4).map(i=>(
+            <div key={i._id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid rgba(239,68,68,.1)"}}>
+              <span style={{fontSize:10,color:"#fca5a5"}}>{i.name}</span>
+              <span style={{fontSize:10,color:"#ef4444",fontWeight:700}}>{i.stockQuantity} {i.unit} / min {i.minimumStock}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Recent orders */}
+      <div>
+        <div style={{fontSize:9,color:"#64748b",letterSpacing:2,marginBottom:8}}>HOẠT ĐỘNG GẦN ĐÂY</div>
+        <div className="gl" style={{borderRadius:10,overflow:"hidden",position:"relative"}}>
+          <Corner sz={7}/>
+          {recent.length===0 ? <div style={{padding:20,textAlign:"center",color:"#334155",fontSize:10}}>Chưa có đơn nào</div>
+          : recent.map((o,i)=>(
+            <div key={o._id} style={{padding:"9px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",
+              borderBottom:i<recent.length-1?"1px solid rgba(147,51,234,.07)":"none"}}>
+              <div>
+                <span className="tg" style={{fontSize:11,fontWeight:900,marginRight:8}}>{o.orderNumber}</span>
+                <Badge color={STATUS_COLOR[o.status]||"#64748b"}>{STATUS_LABEL[o.status]||o.status}</Badge>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:11,fontWeight:700}}>{vnd(o.total)}</div>
+                <div style={{fontSize:8,color:"#475569"}}>{new Date(o.createdAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ORDERS PAGE ───
+function OrdersPage({session}) {
+  const [orders,setOrders]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [q,setQ]=useState("");
+  const [statusFilter,setStatusFilter]=useState("all");
+  const [showToast,toastEl]=useToast();
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    const docs=await fsGet("orders");
+    setOrders(docs.map(parseDoc).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
+    setLoading(false);
+  },[]);
+
+  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t);},[load]);
+
+  const updStatus = async(order, ns)=>{
+    setOrders(p=>p.map(o=>o._id===order._id?{...o,status:ns}:o));
+    try {
+      await fsPatch("orders",order._id,{status:{stringValue:ns}});
+      showToast(`${order.orderNumber} → ${STATUS_LABEL[ns]}`);
+    } catch(e) {
+      setOrders(p=>p.map(o=>o._id===order._id?{...o,status:order.status}:o));
+      showToast("Lỗi cập nhật: "+e.message, false);
+    }
+  };
+
+  const filtered = orders.filter(o=>{
+    const q2=q.toLowerCase();
+    const matchQ = !q || o.orderNumber?.toLowerCase().includes(q2) || o.items?.some?.(i=>i.name?.toLowerCase().includes(q2));
+    const matchS = statusFilter==="all" || o.status===statusFilter;
+    return matchQ && matchS;
+  });
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
+      {toastEl}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>📋 ĐƠN HÀNG</div>
+        <button onClick={load} className="gb" style={{padding:"6px 10px",borderRadius:7,fontSize:10,display:"flex",alignItems:"center",gap:5}}>
+          {loading?<Spinner/>:"🔄"}
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        <input type="text" value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 Tìm đơn..."
+          style={{flex:1,minWidth:140,padding:"7px 11px",borderRadius:7,fontSize:11}}/>
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{padding:"7px 10px",borderRadius:7,fontSize:10}}>
+          <option value="all">Tất cả</option>
+          {STATUS_COLS.map(s=><option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+        </select>
+      </div>
+
+      {/* Kanban */}
+      <div style={{display:"flex",overflowX:"auto",gap:10,paddingBottom:8}}>
+        {STATUS_COLS.map(st=>{
+          const col=filtered.filter(o=>o.status===st);
+          return (
+            <div key={st} style={{minWidth:230,flex:"0 0 230px"}}>
+              <div style={{padding:"7px 10px",borderRadius:"8px 8px 0 0",background:`${STATUS_COLOR[st]}18`,
+                borderBottom:`2px solid ${STATUS_COLOR[st]}`,display:"flex",justifyContent:"space-between",marginBottom:7}}>
+                <span style={{fontSize:9,fontWeight:700,color:STATUS_COLOR[st]}}>{STATUS_LABEL[st]}</span>
+                <span style={{background:STATUS_COLOR[st],color:"#0a0714",borderRadius:"50%",width:17,height:17,
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:900}}>{col.length}</span>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:7,maxHeight:"calc(100vh - 260px)",overflowY:"auto"}}>
+                {col.length===0 ? <div style={{fontSize:9,color:"#334155",textAlign:"center",padding:14}}>Trống</div>
+                : col.map(o=>{
+                  const next=STATUS_NEXT[o.status];
+                  const canEdit=session.role==="owner"||session.role==="manager"||session.role==="staff";
+                  return (
+                    <div key={o._id} className="gl" onClick={()=>canEdit&&next&&updStatus(o,next)}
+                      style={{borderRadius:8,padding:"9px 11px",position:"relative",cursor:next&&canEdit?"pointer":"default",
+                        boxShadow:next&&canEdit?`0 0 0 1px ${STATUS_COLOR[next]}44`:undefined}}>
+                      <Corner sz={5} c={STATUS_COLOR[o.status]}/>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                        <span className="tg" style={{fontWeight:900,fontSize:11}}>{o.orderNumber}</span>
+                        <span style={{fontSize:8,color:"#475569"}}>{new Date(o.createdAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}</span>
+                      </div>
+                      {Array.isArray(o.items)&&o.items.map((it,i)=>(
+                        <div key={i} style={{fontSize:9,color:"#94a3b8",lineHeight:1.7}}>
+                          {it.qty}x {it.name}{it.sweetness&&<span style={{color:"#475569"}}> · {it.sweetness}</span>}
+                        </div>
+                      ))}
+                      <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+                        <span style={{fontSize:9,color:"#64748b"}}>{o.paymentMethod==="cash"?"💵":"🏦"}</span>
+                        <span className="tg" style={{fontWeight:900,fontSize:11}}>{vnd(o.total)}</span>
+                      </div>
+                      {next&&canEdit&&(
+                        <div style={{marginTop:6,padding:"6px",borderRadius:5,textAlign:"center",fontSize:9,fontWeight:700,
+                          background:`${STATUS_COLOR[next]}18`,color:STATUS_COLOR[next],borderTop:`1px solid ${STATUS_COLOR[next]}30`}}>
+                          TAP → {STATUS_LABEL[next]}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── EMPLOYEES ───
+function EmployeesPage({session}) {
+  const [emps,setEmps]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [modal,setModal]=useState(false);
+  const [edit,setEdit]=useState(null);
+  const [form,setForm]=useState({name:"",email:"",phone:"",role:"staff",active:true});
+  const [saving,setSaving]=useState(false);
+  const [showToast,toastEl]=useToast();
+  const [q,setQ]=useState("");
+  const isOwner = session.role==="owner";
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    const docs=await fsGet("employees");
+    setEmps(docs.map(parseDoc));
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const openAdd=()=>{setEdit(null);setForm({name:"",email:"",phone:"",role:"staff",active:true});setModal(true);};
+  const openEdit=emp=>{setEdit(emp);setForm({name:emp.name||"",email:emp.email||"",phone:emp.phone||"",role:emp.role||"staff",active:emp.active!==false});setModal(true);};
+
+  const save=async()=>{
+    if(!form.name||!form.email) return showToast("Cần nhập tên và email",false);
+    setSaving(true);
+    try {
+      const fields={
+        name:toSV(form.name), email:toSV(form.email), phone:toSV(form.phone),
+        role:toSV(form.role), active:toBV(form.active), updatedAt:toSV(new Date().toISOString()),
+      };
+      if (edit) { await fsPatch("employees",edit._id,fields); showToast("Đã cập nhật ✓"); }
+      else { fields.createdAt=toSV(new Date().toISOString()); fields.uid=toSV(""); await fsPost("employees",fields); showToast("Đã thêm nhân viên ✓"); }
+      await load(); setModal(false);
+    } catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  const toggleActive=async emp=>{
+    try {
+      await fsPatch("employees",emp._id,{active:toBV(!emp.active)});
+      showToast(emp.active?"Đã vô hiệu hoá":"Đã kích hoạt");
+      await load();
+    } catch(e){showToast("Lỗi: "+e.message,false);}
+  };
+
+  const filtered=emps.filter(e=>!q||e.name?.toLowerCase().includes(q.toLowerCase())||e.email?.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
+      {toastEl}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>👥 NHÂN VIÊN</div>
+        {isOwner&&<button onClick={openAdd} className="bb" style={{padding:"8px 14px",borderRadius:8,fontSize:10}}>+ THÊM</button>}
+      </div>
+
+      <input type="text" value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 Tìm nhân viên..."
+        style={{width:"100%",padding:"7px 11px",borderRadius:7,fontSize:11}}/>
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {loading ? <div style={{textAlign:"center",padding:24}}><Spinner/></div>
+        : filtered.map(emp=>(
+          <div key={emp._id} className="gl" style={{borderRadius:10,padding:"11px 13px",display:"flex",alignItems:"center",gap:10,
+            opacity:emp.active===false?.5:1,position:"relative"}}>
+            <Corner sz={6} c={ROLE_COLOR[emp.role]||"#9333ea"}/>
+            <div style={{width:38,height:38,borderRadius:"50%",background:`${ROLE_COLOR[emp.role]||"#9333ea"}20`,
+              border:`1px solid ${ROLE_COLOR[emp.role]||"#9333ea"}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+              {emp.name?.[0]?.toUpperCase()||"?"}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                <span style={{fontWeight:700,fontSize:12,color:"#f1f5f9"}}>{emp.name}</span>
+                <Badge color={ROLE_COLOR[emp.role]||"#9333ea"}>{emp.role}</Badge>
+              </div>
+              <div style={{fontSize:9,color:"#64748b"}}>{emp.email}</div>
+              {emp.phone&&<div style={{fontSize:9,color:"#475569"}}>{emp.phone}</div>}
+            </div>
+            {isOwner&&(
+              <div style={{display:"flex",gap:5}}>
+                <button onClick={()=>toggleActive(emp)} style={{padding:"4px 8px",borderRadius:6,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"monospace",
+                  background:emp.active!==false?"rgba(34,197,94,.15)":"rgba(100,116,139,.15)",
+                  color:emp.active!==false?"#22c55e":"#64748b",
+                  border:`1px solid ${emp.active!==false?"rgba(34,197,94,.3)":"rgba(100,116,139,.25)"}`}}>
+                  {emp.active!==false?"ON":"OFF"}
+                </button>
+                <button onClick={()=>openEdit(emp)} className="gb" style={{padding:"4px 8px",borderRadius:6,fontSize:9}}>✏️</button>
+              </div>
+            )}
+          </div>
+        ))}
+        {!loading&&filtered.length===0&&<div style={{textAlign:"center",padding:24,color:"#334155",fontSize:10}}>Chưa có nhân viên nào</div>}
+      </div>
+
+      {modal&&(
+        <Modal title={edit?"✏️ SỬA NHÂN VIÊN":"➕ THÊM NHÂN VIÊN"} onClose={()=>setModal(false)}>
+          <div style={{display:"flex",flexDirection:"column",gap:11}}>
+            <Field label="Họ tên"><Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Nguyễn Văn A"/></Field>
+            <Field label="Email"><Input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="staff@afkhub.vn"/></Field>
+            <Field label="Số điện thoại"><Input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="0901234567"/></Field>
+            <Field label="Vai trò">
+              <Select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}>
+                {ROLES.map(r=><option key={r} value={r}>{r.toUpperCase()}</option>)}
+              </Select>
+            </Field>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:9,color:"#64748b",letterSpacing:1}}>TRẠNG THÁI</span>
+              <button onClick={()=>setForm({...form,active:!form.active})} style={{padding:"5px 14px",borderRadius:6,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"monospace",
+                background:form.active?"rgba(34,197,94,.15)":"rgba(100,116,139,.15)",
+                color:form.active?"#22c55e":"#64748b",border:`1px solid ${form.active?"rgba(34,197,94,.3)":"rgba(100,116,139,.3)"}`}}>
+                {form.active?"✅ Hoạt động":"⏸ Vô hiệu"}
+              </button>
+            </div>
+            {!edit&&<div className="glg" style={{borderRadius:8,padding:"9px 12px",fontSize:9,color:"#ca8a04",lineHeight:1.7}}>
+              💡 Sau khi thêm, hãy tạo tài khoản Firebase Auth cho nhân viên này tại Firebase Console, rồi cập nhật UID vào Firestore.
+            </div>}
+            <button onClick={save} disabled={saving} className="bb gg" style={{padding:"12px",borderRadius:9,fontSize:12,letterSpacing:1,marginTop:4}}>
+              {saving?<><Spinner/> ĐANG LƯU...</>:"💾 LƯU"}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── INGREDIENTS ───
+function IngredientsPage({session}) {
+  const [ingrs,setIngrs]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [modal,setModal]=useState(false);
+  const [edit,setEdit]=useState(null);
+  const [form,setForm]=useState({name:"",category:"",supplier:"",purchasePrice:0,stockQuantity:0,minimumStock:0,unit:"g"});
+  const [saving,setSaving]=useState(false);
+  const [showToast,toastEl]=useToast();
+  const [q,setQ]=useState("");
+  const canEdit=["owner","manager"].includes(session.role);
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    const docs=await fsGet("ingredients");
+    setIngrs(docs.map(parseDoc).sort((a,b)=>(a.name||"").localeCompare(b.name||"")));
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const openAdd=()=>{setEdit(null);setForm({name:"",category:"",supplier:"",purchasePrice:0,stockQuantity:0,minimumStock:0,unit:"g"});setModal(true);};
+  const openEdit=i=>{setEdit(i);setForm({name:i.name||"",category:i.category||"",supplier:i.supplier||"",purchasePrice:i.purchasePrice||0,stockQuantity:i.stockQuantity||0,minimumStock:i.minimumStock||0,unit:i.unit||"g"});setModal(true);};
+
+  const save=async()=>{
+    if(!form.name) return showToast("Cần nhập tên nguyên liệu",false);
+    setSaving(true);
+    try {
+      const fields={
+        name:toSV(form.name),category:toSV(form.category),supplier:toSV(form.supplier),
+        purchasePrice:toIV(form.purchasePrice),stockQuantity:toIV(form.stockQuantity),
+        minimumStock:toIV(form.minimumStock),unit:toSV(form.unit),updatedAt:toSV(new Date().toISOString()),
+      };
+      if(edit){await fsPatch("ingredients",edit._id,fields);showToast("Đã cập nhật ✓");}
+      else{fields.createdAt=toSV(new Date().toISOString());await fsPost("ingredients",fields);showToast("Đã thêm ✓");}
+      await load();setModal(false);
+    }catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  const del=async i=>{
+    if(!confirm(`Xoá "${i.name}"?`))return;
+    try{await fsDelete("ingredients",i._id);showToast("Đã xoá ✓");await load();}
+    catch(e){showToast("Lỗi: "+e.message,false);}
+  };
+
+  const filtered=ingrs.filter(i=>!q||i.name?.toLowerCase().includes(q.toLowerCase())||i.category?.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
+      {toastEl}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>🧪 NGUYÊN LIỆU</div>
+        {canEdit&&<button onClick={openAdd} className="bb" style={{padding:"8px 14px",borderRadius:8,fontSize:10}}>+ THÊM</button>}
+      </div>
+
+      <input type="text" value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 Tìm nguyên liệu..."
+        style={{width:"100%",padding:"7px 11px",borderRadius:7,fontSize:11}}/>
+
+      {/* Low stock banner */}
+      {ingrs.filter(i=>i.stockQuantity<=i.minimumStock).length>0&&(
+        <div className="glr" style={{borderRadius:8,padding:"9px 12px",position:"relative"}}>
+          <Corner sz={6} c="#ef4444"/>
+          <div style={{fontSize:9,color:"#ef4444",fontWeight:700,letterSpacing:1}}>
+            ⚠️ {ingrs.filter(i=>i.stockQuantity<=i.minimumStock).length} nguyên liệu sắp hết kho
+          </div>
+        </div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:7}}>
+        {loading?<div style={{textAlign:"center",padding:24}}><Spinner/></div>
+        :filtered.map(i=>{
+          const low=i.stockQuantity<=i.minimumStock;
+          return (
+            <div key={i._id} className="gl" style={{borderRadius:10,padding:"10px 12px",position:"relative",
+              borderColor:low?"rgba(239,68,68,.35)":"rgba(147,51,234,.2)"}}>
+              <Corner sz={6} c={low?"#ef4444":"#9333ea"}/>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                    <span style={{fontWeight:700,fontSize:12,color:"#f1f5f9"}}>{i.name}</span>
+                    {low&&<Badge color="#ef4444">LOW</Badge>}
+                  </div>
+                  <div style={{fontSize:9,color:"#64748b",marginBottom:2}}>
+                    {i.category&&<span className="tp">{i.category} · </span>}
+                    {i.supplier&&<span>NCC: {i.supplier}</span>}
+                  </div>
+                  <div style={{display:"flex",gap:12,fontSize:9}}>
+                    <span style={{color:"#94a3b8"}}>Tồn: <strong style={{color:low?"#ef4444":"#22c55e"}}>{i.stockQuantity} {i.unit}</strong></span>
+                    <span style={{color:"#64748b"}}>Min: {i.minimumStock} {i.unit}</span>
+                    <span style={{color:"#64748b"}}>Giá: {vnd(i.purchasePrice)}/{i.unit}</span>
+                  </div>
+                </div>
+                {canEdit&&(
+                  <div style={{display:"flex",gap:5,flexShrink:0}}>
+                    <button onClick={()=>openEdit(i)} className="gb" style={{padding:"4px 8px",borderRadius:6,fontSize:9}}>✏️</button>
+                    <button onClick={()=>del(i)} className="rb" style={{padding:"4px 8px",borderRadius:6,fontSize:9}}>🗑️</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {!loading&&filtered.length===0&&<div style={{textAlign:"center",padding:24,color:"#334155",fontSize:10}}>Chưa có nguyên liệu nào</div>}
+      </div>
+
+      {modal&&(
+        <Modal title={edit?"✏️ SỬA NGUYÊN LIỆU":"➕ THÊM NGUYÊN LIỆU"} onClose={()=>setModal(false)}>
+          <div style={{display:"flex",flexDirection:"column",gap:11}}>
+            <Field label="Tên nguyên liệu"><Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Cà phê hạt"/></Field>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <Field label="Danh mục"><Input value={form.category} onChange={e=>setForm({...form,category:e.target.value})} placeholder="Coffee"/></Field>
+              <Field label="Đơn vị">
+                <Select value={form.unit} onChange={e=>setForm({...form,unit:e.target.value})}>
+                  {UNITS.map(u=><option key={u} value={u}>{u}</option>)}
+                </Select>
+              </Field>
+            </div>
+            <Field label="Nhà cung cấp"><Input value={form.supplier} onChange={e=>setForm({...form,supplier:e.target.value})} placeholder="Trung Nguyên"/></Field>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+              <Field label="Giá mua (đ)"><Input type="number" value={form.purchasePrice} onChange={e=>setForm({...form,purchasePrice:e.target.value})} placeholder="0"/></Field>
+              <Field label="Tồn kho"><Input type="number" value={form.stockQuantity} onChange={e=>setForm({...form,stockQuantity:e.target.value})} placeholder="0"/></Field>
+              <Field label="Tồn tối thiểu"><Input type="number" value={form.minimumStock} onChange={e=>setForm({...form,minimumStock:e.target.value})} placeholder="0"/></Field>
+            </div>
+            <button onClick={save} disabled={saving} className="bb gg" style={{padding:"12px",borderRadius:9,fontSize:12,letterSpacing:1,marginTop:4}}>
+              {saving?<><Spinner/> ĐANG LƯU...</>:"💾 LƯU"}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── RECIPES ───
+function RecipesPage({session}) {
+  const [recipes,setRecipes]=useState([]);
+  const [menu,setMenu]=useState([]);
+  const [ingrs,setIngrs]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [modal,setModal]=useState(false);
+  const [edit,setEdit]=useState(null);
+  const [selectedProduct,setSelectedProduct]=useState("");
+  const [recipeIngrs,setRecipeIngrs]=useState([]);
+  const [saving,setSaving]=useState(false);
+  const [showToast,toastEl]=useToast();
+  const canEdit=["owner","manager"].includes(session.role);
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    const [rDocs,mDocs,iDocs]=await Promise.all([fsGet("recipes"),fsGet("menu"),fsGet("ingredients")]);
+    setRecipes(rDocs.map(parseDoc));
+    setMenu(mDocs.map(d=>{const p=parseDoc(d);return{...p,price:p.sellPrice||p.price||0};}));
+    setIngrs(iDocs.map(parseDoc));
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const openAdd=()=>{setEdit(null);setSelectedProduct("");setRecipeIngrs([]);setModal(true);};
+  const openEdit=r=>{
+    setEdit(r);
+    setSelectedProduct(r.productId||"");
+    setRecipeIngrs(Array.isArray(r.ingredients)?r.ingredients.map(i=>({...i})):[]);
+    setModal(true);
+  };
+
+  const addIngr=()=>setRecipeIngrs(p=>[...p,{ingredientId:"",ingredientName:"",quantity:0,unit:"g",cost:0}]);
+  const updIngr=(idx,field,val)=>setRecipeIngrs(p=>p.map((i,j)=>{
+    if(j!==idx)return i;
+    const updated={...i,[field]:val};
+    if(field==="ingredientId"){
+      const found=ingrs.find(x=>x._id===val);
+      if(found){updated.ingredientName=found.name;updated.unit=found.unit||"g";updated.cost=found.purchasePrice||0;}
+    }
+    return updated;
+  }));
+  const remIngr=idx=>setRecipeIngrs(p=>p.filter((_,j)=>j!==idx));
+
+  const totalCost=useMemo(()=>recipeIngrs.reduce((s,i)=>s+(parseFloat(i.cost)||0)*(parseFloat(i.quantity)||0),0),[recipeIngrs]);
+  const sellPrice=useMemo(()=>{const p=menu.find(m=>m._id===selectedProduct);return p?.price||0;},[menu,selectedProduct]);
+  const profit=sellPrice-totalCost;
+  const margin=sellPrice?Math.round(profit/sellPrice*100):0;
+
+  const save=async()=>{
+    if(!selectedProduct) return showToast("Chọn sản phẩm",false);
+    const prod=menu.find(m=>m._id===selectedProduct);
+    if(!prod)return;
+    setSaving(true);
+    try {
+      const iArr=recipeIngrs.map(i=>({
+        ingredientId:String(i.ingredientId||""),ingredientName:String(i.ingredientName||""),
+        quantity:parseFloat(i.quantity)||0,unit:String(i.unit||"g"),cost:parseFloat(i.cost)||0,
+      }));
+      const fields={
+        productId:toSV(selectedProduct),productName:toSV(prod.name||""),
+        ingredients:{arrayValue:{values:iArr.map(i=>({mapValue:{fields:{
+          ingredientId:toSV(i.ingredientId),ingredientName:toSV(i.ingredientName),
+          quantity:toFV(i.quantity),unit:toSV(i.unit),cost:toFV(i.cost),
+        }}}))}} ,
+        totalCost:toFV(totalCost),sellPrice:toIV(sellPrice),
+        estimatedProfit:toFV(profit),margin:toIV(margin),
+        updatedAt:toSV(new Date().toISOString()),
+      };
+      if(edit){await fsPatch("recipes",edit._id,fields);showToast("Đã cập nhật ✓");}
+      else{fields.createdAt=toSV(new Date().toISOString());await fsPost("recipes",fields);showToast("Đã tạo công thức ✓");}
+      await load();setModal(false);
+    }catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  const del=async r=>{
+    if(!confirm(`Xoá công thức "${r.productName}"?`))return;
+    try{await fsDelete("recipes",r._id);showToast("Đã xoá ✓");await load();}
+    catch(e){showToast("Lỗi: "+e.message,false);}
+  };
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
+      {toastEl}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>📖 CÔNG THỨC</div>
+        {canEdit&&<button onClick={openAdd} className="bb" style={{padding:"8px 14px",borderRadius:8,fontSize:10}}>+ THÊM</button>}
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {loading?<div style={{textAlign:"center",padding:24}}><Spinner/></div>
+        :recipes.length===0?<div style={{textAlign:"center",padding:24,color:"#334155",fontSize:10}}>Chưa có công thức nào</div>
+        :recipes.map(r=>{
+          const m=parseFloat(r.margin)||0;
+          return (
+            <div key={r._id} className="gl" style={{borderRadius:10,padding:"11px 13px",position:"relative"}}>
+              <Corner sz={6}/>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:12,color:"#f1f5f9",marginBottom:3}}>{r.productName}</div>
+                  <div style={{display:"flex",gap:8,fontSize:9}}>
+                    <span style={{color:"#64748b"}}>Chi phí: <strong style={{color:"#f97316"}}>{vnd(r.totalCost)}</strong></span>
+                    <span style={{color:"#64748b"}}>Giá bán: <strong style={{color:"#eab308"}}>{vnd(r.sellPrice)}</strong></span>
+                    <span style={{color:"#64748b"}}>Lợi nhuận: <strong style={{color:m>30?"#22c55e":"#f97316"}}>{m}%</strong></span>
+                  </div>
+                </div>
+                {canEdit&&(
+                  <div style={{display:"flex",gap:5}}>
+                    <button onClick={()=>openEdit(r)} className="gb" style={{padding:"4px 8px",borderRadius:6,fontSize:9}}>✏️</button>
+                    <button onClick={()=>del(r)} className="rb" style={{padding:"4px 8px",borderRadius:6,fontSize:9}}>🗑️</button>
+                  </div>
+                )}
+              </div>
+              {Array.isArray(r.ingredients)&&r.ingredients.length>0&&(
+                <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                  {r.ingredients.map((i,idx)=>(
+                    <span key={idx} style={{background:"rgba(147,51,234,.12)",border:"1px solid rgba(147,51,234,.2)",
+                      borderRadius:4,padding:"2px 7px",fontSize:8,color:"#a855f7"}}>
+                      {i.ingredientName} {i.quantity}{i.unit}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {modal&&(
+        <Modal title={edit?"✏️ SỬA CÔNG THỨC":"➕ THÊM CÔNG THỨC"} onClose={()=>setModal(false)} wide>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <Field label="Sản phẩm">
+              <Select value={selectedProduct} onChange={e=>setSelectedProduct(e.target.value)}>
+                <option value="">-- Chọn sản phẩm --</option>
+                {menu.map(m=><option key={m._id} value={m._id}>{m.name} · {vnd(m.price)}</option>)}
+              </Select>
+            </Field>
+
+            {/* Cost summary */}
+            {selectedProduct&&(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                <div className="gl" style={{borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                  <div style={{fontSize:8,color:"#64748b",marginBottom:2}}>CHI PHÍ</div>
+                  <div style={{fontWeight:900,fontSize:13,color:"#f97316"}}>{vnd(totalCost)}</div>
+                </div>
+                <div className="gl" style={{borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                  <div style={{fontSize:8,color:"#64748b",marginBottom:2}}>LỢI NHUẬN</div>
+                  <div style={{fontWeight:900,fontSize:13,color:profit>0?"#22c55e":"#ef4444"}}>{vnd(profit)}</div>
+                </div>
+                <div className="glg" style={{borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                  <div style={{fontSize:8,color:"#ca8a04",marginBottom:2}}>MARGIN</div>
+                  <div className="tg" style={{fontWeight:900,fontSize:13}}>{margin}%</div>
+                </div>
+              </div>
+            )}
+
+            {/* Ingredients */}
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <span style={{fontSize:9,color:"#64748b",letterSpacing:1}}>NGUYÊN LIỆU</span>
+                <button onClick={addIngr} className="gb" style={{padding:"4px 10px",borderRadius:6,fontSize:9}}>+ Thêm</button>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                {recipeIngrs.map((ri,idx)=>(
+                  <div key={idx} className="gl" style={{borderRadius:8,padding:"9px 10px",display:"flex",gap:7,alignItems:"center"}}>
+                    <select value={ri.ingredientId} onChange={e=>updIngr(idx,"ingredientId",e.target.value)}
+                      style={{flex:2,padding:"6px 8px",borderRadius:6,fontSize:10,background:"rgba(255,255,255,.05)",border:"1px solid rgba(147,51,234,.3)",color:"#fff",fontFamily:"monospace"}}>
+                      <option value="">-- Nguyên liệu --</option>
+                      {ingrs.map(i=><option key={i._id} value={i._id}>{i.name}</option>)}
+                    </select>
+                    <input type="number" value={ri.quantity} onChange={e=>updIngr(idx,"quantity",e.target.value)}
+                      style={{width:55,padding:"6px 8px",borderRadius:6,fontSize:10}} placeholder="Qty"/>
+                    <span style={{fontSize:9,color:"#64748b",whiteSpace:"nowrap"}}>{ri.unit}</span>
+                    <button onClick={()=>remIngr(idx)} className="rb" style={{padding:"4px 7px",borderRadius:5,fontSize:9}}>✕</button>
+                  </div>
+                ))}
+                {recipeIngrs.length===0&&<div style={{fontSize:9,color:"#334155",textAlign:"center",padding:12}}>Thêm nguyên liệu vào công thức</div>}
+              </div>
+            </div>
+
+            <button onClick={save} disabled={saving} className="bb gg" style={{padding:"12px",borderRadius:9,fontSize:12,letterSpacing:1}}>
+              {saving?<><Spinner/> ĐANG LƯU...</>:"💾 LƯU CÔNG THỨC"}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── INVENTORY LOGS ───
+function InventoryPage({session}) {
+  const [logs,setLogs]=useState([]);
+  const [ingrs,setIngrs]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [modal,setModal]=useState(false);
+  const [form,setForm]=useState({ingredientId:"",type:"import",quantity:0,reason:""});
+  const [saving,setSaving]=useState(false);
+  const [showToast,toastEl]=useToast();
+  const canEdit=["owner","manager"].includes(session.role);
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    const [lDocs,iDocs]=await Promise.all([fsGet("stock_logs"),fsGet("ingredients")]);
+    setLogs(lDocs.map(parseDoc).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
+    setIngrs(iDocs.map(parseDoc));
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const save=async()=>{
+    if(!form.ingredientId||!form.quantity) return showToast("Cần chọn nguyên liệu và nhập số lượng",false);
+    setSaving(true);
+    try {
+      const ingr=ingrs.find(i=>i._id===form.ingredientId);
+      const qty=parseFloat(form.quantity)||0;
+      const before=ingr?.stockQuantity||0;
+      let after=before;
+      if(form.type==="import") after=before+qty;
+      else if(["usage","waste"].includes(form.type)) after=Math.max(0,before-qty);
+      else after=qty; // manual
+
+      const logFields={
+        ingredientId:toSV(form.ingredientId),ingredientName:toSV(ingr?.name||""),
+        type:toSV(form.type),quantity:toFV(qty),
+        beforeStock:toFV(before),afterStock:toFV(after),
+        reason:toSV(form.reason),createdBy:toSV(session.name||""),
+        createdAt:toSV(new Date().toISOString()),
+      };
+      await fsPost("stock_logs",logFields);
+      // Update ingredient stock
+      await fsPatch("ingredients",form.ingredientId,{stockQuantity:toFV(after),updatedAt:toSV(new Date().toISOString())});
+      showToast("Đã ghi nhận ✓");
+      await load();setModal(false);
+    }catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  const TYPE_COLOR={import:"#22c55e",usage:"#f97316",waste:"#ef4444",manual_adjustment:"#a855f7"};
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
+      {toastEl}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>📦 NHẬT KÝ KHO</div>
+        {canEdit&&<button onClick={()=>{setForm({ingredientId:"",type:"import",quantity:0,reason:""});setModal(true);}} className="bb" style={{padding:"8px 14px",borderRadius:8,fontSize:10}}>+ GHI NHẬN</button>}
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:7}}>
+        {loading?<div style={{textAlign:"center",padding:24}}><Spinner/></div>
+        :logs.length===0?<div style={{textAlign:"center",padding:24,color:"#334155",fontSize:10}}>Chưa có nhật ký nào</div>
+        :logs.slice(0,50).map(l=>{
+          const tc=TYPE_COLOR[l.type]||"#64748b";
+          return (
+            <div key={l._id} className="gl" style={{borderRadius:9,padding:"10px 12px",position:"relative",display:"flex",gap:10,alignItems:"center"}}>
+              <Corner sz={5} c={tc}/>
+              <div style={{width:32,height:32,borderRadius:8,background:`${tc}18`,border:`1px solid ${tc}30`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
+                {l.type==="import"?"📥":l.type==="usage"?"🔥":l.type==="waste"?"🗑️":"✏️"}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                  <span style={{fontWeight:700,fontSize:11,color:"#f1f5f9"}}>{l.ingredientName}</span>
+                  <Badge color={tc}>{LOG_TYPE_LABEL[l.type]||l.type}</Badge>
+                </div>
+                <div style={{fontSize:9,color:"#64748b"}}>
+                  {l.beforeStock} → <strong style={{color:tc}}>{l.afterStock}</strong> {ingrs.find(i=>i._id===l.ingredientId)?.unit||""}
+                  {l.reason&&<span> · {l.reason}</span>}
+                </div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontSize:10,fontWeight:700,color:tc}}>{l.type==="import"?"+":"-"}{l.quantity}</div>
+                <div style={{fontSize:8,color:"#475569"}}>{l.createdBy}</div>
+                <div style={{fontSize:7,color:"#334155"}}>{new Date(l.createdAt).toLocaleDateString("vi-VN")}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {modal&&(
+        <Modal title="📦 GHI NHẬN KHO" onClose={()=>setModal(false)}>
+          <div style={{display:"flex",flexDirection:"column",gap:11}}>
+            <Field label="Nguyên liệu">
+              <Select value={form.ingredientId} onChange={e=>setForm({...form,ingredientId:e.target.value})}>
+                <option value="">-- Chọn nguyên liệu --</option>
+                {ingrs.map(i=><option key={i._id} value={i._id}>{i.name} (tồn: {i.stockQuantity} {i.unit})</option>)}
+              </Select>
+            </Field>
+            <Field label="Loại giao dịch">
+              <Select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}>
+                {LOG_TYPES.map(t=><option key={t} value={t}>{LOG_TYPE_LABEL[t]}</option>)}
+              </Select>
+            </Field>
+            <Field label="Số lượng"><Input type="number" value={form.quantity} onChange={e=>setForm({...form,quantity:e.target.value})} placeholder="0"/></Field>
+            <Field label="Lý do (tuỳ chọn)"><Input value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})} placeholder="Nhập hàng từ nhà cung cấp..."/></Field>
+            <button onClick={save} disabled={saving} className="bb gg" style={{padding:"12px",borderRadius:9,fontSize:12,letterSpacing:1,marginTop:4}}>
+              {saving?<><Spinner/> ĐANG LƯU...</>:"💾 XÁC NHẬN"}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── ANALYTICS ───
+function AnalyticsPage() {
+  const [orders,setOrders]=useState([]);
+  const [recipes,setRecipes]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [period,setPeriod]=useState("today");
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    const [oDocs,rDocs]=await Promise.all([fsGet("orders"),fsGet("recipes")]);
+    setOrders(oDocs.map(parseDoc));
+    setRecipes(rDocs.map(parseDoc));
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const filtered=useMemo(()=>{
+    const now=new Date();
+    return orders.filter(o=>{
+      const d=new Date(o.createdAt);
+      if(period==="today") return d.toDateString()===now.toDateString();
+      if(period==="week"){const w=new Date(now);w.setDate(w.getDate()-7);return d>=w;}
+      if(period==="month"){const m=new Date(now);m.setDate(m.getDate()-30);return d>=m;}
+      return true;
+    }).filter(o=>o.status!=="pending");
+  },[orders,period]);
+
+  const revenue=filtered.reduce((s,o)=>s+(o.total||0),0);
+  const avgOrder=filtered.length?revenue/filtered.length:0;
+
+  // Top products
+  const prodMap={};
+  filtered.forEach(o=>{
+    if(!Array.isArray(o.items))return;
+    o.items.forEach(i=>{
+      if(!i.name)return;
+      prodMap[i.name]=(prodMap[i.name]||0)+((i.qty||1)*(i.price||0));
+    });
+  });
+  const topProds=Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Item count
+  const itemMap={};
+  filtered.forEach(o=>{
+    if(!Array.isArray(o.items))return;
+    o.items.forEach(i=>{if(i.name)itemMap[i.name]=(itemMap[i.name]||0)+(i.qty||1);});
+  });
+  const topItems=Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Payment method
+  const cash=filtered.filter(o=>o.paymentMethod==="cash").length;
+  const bank=filtered.filter(o=>o.paymentMethod==="bank_transfer").length;
+
+  // Profit estimate using recipes
+  const totalCost=filtered.reduce((s,o)=>{
+    if(!Array.isArray(o.items))return s;
+    return s+o.items.reduce((ss,i)=>{
+      const r=recipes.find(rc=>rc.productName===i.name);
+      return ss+(r?.totalCost||0)*(i.qty||1);
+    },0);
+  },0);
+  const profit=revenue-totalCost;
+
+  // Hourly heatmap
+  const hourMap=new Array(24).fill(0);
+  filtered.forEach(o=>{const h=new Date(o.createdAt).getHours();hourMap[h]++;});
+  const maxH=Math.max(...hourMap,1);
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>📈 PHÂN TÍCH</div>
+        <div style={{display:"flex",gap:5}}>
+          {[["today","Hôm nay"],["week","7 ngày"],["month","30 ngày"],["all","Tất cả"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setPeriod(v)} style={{padding:"5px 10px",borderRadius:6,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"monospace",
+              background:period===v?"linear-gradient(135deg,#eab308,#f59e0b)":"rgba(255,255,255,.04)",
+              color:period===v?"#0a0714":"#64748b",border:period===v?"none":"1px solid rgba(147,51,234,.2)"}}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading?<div style={{textAlign:"center",padding:40}}><Spinner/></div>:(
+        <>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
+            <StatCard label="Doanh thu" value={vnd(revenue)} sub={`${filtered.length} đơn`} icon="💰"/>
+            <StatCard label="Lợi nhuận ước tính" value={vnd(profit)} sub={`Margin: ${pct(profit,revenue)}%`} color="#22c55e" icon="📊"/>
+            <StatCard label="Trung bình/đơn" value={vnd(Math.round(avgOrder))} color="#a855f7" icon="🧾"/>
+            <StatCard label="Chi phí nguyên liệu" value={vnd(Math.round(totalCost))} color="#f97316" icon="🧪"/>
+          </div>
+
+          {/* Hourly chart */}
+          <div className="gl" style={{borderRadius:10,padding:"12px 14px",position:"relative"}}>
+            <Corner sz={7}/>
+            <div style={{fontSize:9,color:"#64748b",letterSpacing:2,marginBottom:10}}>GIỜ CAO ĐIỂM</div>
+            <div style={{display:"flex",alignItems:"flex-end",gap:3,height:50}}>
+              {hourMap.map((v,h)=>(
+                <div key={h} title={`${h}h: ${v} đơn`} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                  <div style={{width:"100%",borderRadius:2,transition:"height .3s",
+                    height:`${Math.round(v/maxH*44)}px`,minHeight:v>0?3:1,
+                    background:v>0?`linear-gradient(to top,#eab308,#f59e0b)`:"rgba(255,255,255,.05)"}}/>
+                  {(h%6===0)&&<span style={{fontSize:6,color:"#334155"}}>{h}h</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top products */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div className="gl" style={{borderRadius:10,padding:"11px 13px",position:"relative"}}>
+              <Corner sz={6}/>
+              <div style={{fontSize:9,color:"#64748b",letterSpacing:1,marginBottom:9}}>TOP DOANH THU</div>
+              {topProds.length===0?<div style={{fontSize:9,color:"#334155"}}>Chưa có dữ liệu</div>
+              :topProds.map(([name,rev],i)=>(
+                <div key={name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid rgba(147,51,234,.07)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{fontSize:8,color:"#eab308",fontWeight:900}}>#{i+1}</span>
+                    <span style={{fontSize:9,color:"#94a3b8",whiteSpace:"nowrap",overflow:"hidden",maxWidth:90,textOverflow:"ellipsis"}}>{name}</span>
+                  </div>
+                  <span style={{fontSize:9,fontWeight:700,color:"#eab308"}}>{vnd(rev)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="gl" style={{borderRadius:10,padding:"11px 13px",position:"relative"}}>
+              <Corner sz={6}/>
+              <div style={{fontSize:9,color:"#64748b",letterSpacing:1,marginBottom:9}}>TOP SỐ LƯỢNG</div>
+              {topItems.length===0?<div style={{fontSize:9,color:"#334155"}}>Chưa có dữ liệu</div>
+              :topItems.map(([name,cnt],i)=>(
+                <div key={name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid rgba(147,51,234,.07)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{fontSize:8,color:"#a855f7",fontWeight:900}}>#{i+1}</span>
+                    <span style={{fontSize:9,color:"#94a3b8",whiteSpace:"nowrap",overflow:"hidden",maxWidth:90,textOverflow:"ellipsis"}}>{name}</span>
+                  </div>
+                  <span style={{fontSize:9,fontWeight:700,color:"#a855f7"}}>{cnt} ly</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Payment split */}
+          <div className="gl" style={{borderRadius:10,padding:"11px 13px",position:"relative"}}>
+            <Corner sz={6}/>
+            <div style={{fontSize:9,color:"#64748b",letterSpacing:1,marginBottom:9}}>PHƯƠNG THỨC THANH TOÁN</div>
+            <div style={{display:"flex",gap:10}}>
+              {[["💵 Tiền mặt",cash,"#eab308"],["🏦 Chuyển khoản",bank,"#a855f7"]].map(([lb,cnt,c])=>(
+                <div key={lb} style={{flex:1,textAlign:"center",padding:"10px",background:`${c}10`,borderRadius:8,border:`1px solid ${c}25`}}>
+                  <div style={{fontSize:16,marginBottom:4}}>{lb.split(" ")[0]}</div>
+                  <div style={{fontWeight:900,fontSize:16,color:c}}>{cnt}</div>
+                  <div style={{fontSize:8,color:"#64748b"}}>{lb.split(" ").slice(1).join(" ")}</div>
+                  <div style={{fontSize:8,color:c}}>{filtered.length?pct(cnt,filtered.length):0}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── REPORTS ───
+function ReportsPage() {
+  const [orders,setOrders]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [generating,setGenerating]=useState(false);
+  const [reports,setReports]=useState([]);
+  const [showToast,toastEl]=useToast();
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    const [oDocs,rDocs]=await Promise.all([fsGet("orders"),fsGet("dailyReports")]);
+    setOrders(oDocs.map(parseDoc));
+    setReports(rDocs.map(parseDoc).sort((a,b)=>new Date(b.date)-new Date(a.date)));
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const genDailyReport=async()=>{
+    setGenerating(true);
+    try {
+      const today=new Date();
+      const todayStr=today.toISOString().split("T")[0];
+      const todayOrders=orders.filter(o=>new Date(o.createdAt).toDateString()===today.toDateString()&&o.status!=="pending");
+      const revenue=todayOrders.reduce((s,o)=>s+(o.total||0),0);
+      const itemMap={};
+      todayOrders.forEach(o=>{if(Array.isArray(o.items))o.items.forEach(i=>{if(i.name)itemMap[i.name]=(itemMap[i.name]||0)+(i.qty||1);});});
+      const topProducts=Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([name,qty])=>({name,qty}));
+
+      const fields={
+        date:toSV(todayStr),revenue:toIV(revenue),orderCount:toIV(todayOrders.length),
+        topProducts:{arrayValue:{values:topProducts.map(p=>({mapValue:{fields:{name:toSV(p.name),qty:toIV(p.qty)}}}))}},
+        createdAt:toSV(new Date().toISOString()),
+      };
+      await fsPost("dailyReports",fields);
+      showToast("Đã tạo báo cáo ngày ✓");
+      await load();
+    }catch(e){showToast("Lỗi: "+e.message,false);}
+    setGenerating(false);
+  };
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
+      {toastEl}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>📄 BÁO CÁO</div>
+        <button onClick={genDailyReport} disabled={generating} className="bb" style={{padding:"8px 14px",borderRadius:8,fontSize:10}}>
+          {generating?<Spinner/>:"📊 TẠO BÁO CÁO HÔM NAY"}
+        </button>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {loading?<div style={{textAlign:"center",padding:24}}><Spinner/></div>
+        :reports.length===0?<div style={{textAlign:"center",padding:24,color:"#334155",fontSize:10}}>Chưa có báo cáo nào. Nhấn "Tạo báo cáo" để bắt đầu.</div>
+        :reports.map(r=>(
+          <div key={r._id} className="gl" style={{borderRadius:10,padding:"11px 13px",position:"relative"}}>
+            <Corner sz={6}/>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:7}}>
+              <div>
+                <div className="tg" style={{fontWeight:900,fontSize:12}}>{r.date}</div>
+                <div style={{fontSize:8,color:"#475569"}}>{new Date(r.createdAt).toLocaleTimeString("vi-VN")}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div className="tg" style={{fontWeight:900,fontSize:14}}>{vnd(r.revenue)}</div>
+                <div style={{fontSize:9,color:"#64748b"}}>{r.orderCount} đơn</div>
+              </div>
+            </div>
+            {Array.isArray(r.topProducts)&&r.topProducts.length>0&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {r.topProducts.map((p,i)=>(
+                  <span key={i} style={{background:"rgba(147,51,234,.1)",border:"1px solid rgba(147,51,234,.2)",
+                    borderRadius:4,padding:"2px 7px",fontSize:8,color:"#a855f7"}}>
+                    {p.name}: {p.qty}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── SETTINGS ───
+function SettingsPage({session}) {
+  const [settings,setSettings]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [form,setForm]=useState({});
+  const [saving,setSaving]=useState(false);
+  const [showToast,toastEl]=useToast();
+  const isOwner=session.role==="owner";
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    try {
+      const doc=await fsGet("settings","main");
+      const parsed=parseDoc(doc);
+      setSettings(parsed);
+      setForm(parsed);
+    }catch{
+      const def={businessName:"AFK HUB",discordWebhook:DSC,bankName:"Techcombank",bankAccount:"14024892118018",bankOwner:"Pham Thi Thu Trang",bankCode:"TCB"};
+      setForm(def);
+    }
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const save=async()=>{
+    setSaving(true);
+    try {
+      const fields={};
+      Object.entries(form).forEach(([k,v])=>{if(typeof v==="string")fields[k]=toSV(v);});
+      fields.updatedAt=toSV(new Date().toISOString());
+      if(settings?._id){await fsPatch("settings","main",fields);}
+      else{await fsPost("settings",fields);}
+      showToast("Đã lưu cài đặt ✓");
+    }catch(e){showToast("Lỗi: "+e.message,false);}
+    setSaving(false);
+  };
+
+  const FIELDS=[
+    ["businessName","Tên cửa hàng"],["discordWebhook","Discord Webhook URL"],
+    ["bankName","Ngân hàng"],["bankCode","Mã ngân hàng"],
+    ["bankAccount","Số tài khoản"],["bankOwner","Chủ tài khoản"],
+  ];
+
+  return (
+    <div style={{padding:16,display:"flex",flexDirection:"column",gap:12}}>
+      {toastEl}
+      <div className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>⚙️ CÀI ĐẶT</div>
+
+      {loading?<div style={{textAlign:"center",padding:24}}><Spinner/></div>:(
+        <>
+          <div className="gl" style={{borderRadius:10,padding:14,position:"relative"}}>
+            <Corner sz={7}/>
+            <div style={{fontSize:9,color:"#64748b",letterSpacing:2,marginBottom:12}}>THÔNG TIN CỬA HÀNG & THANH TOÁN</div>
+            <div style={{display:"flex",flexDirection:"column",gap:11}}>
+              {FIELDS.map(([k,lb])=>(
+                <Field key={k} label={lb}>
+                  <Input value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} disabled={!isOwner} style={{opacity:isOwner?1:.6}}/>
+                </Field>
+              ))}
+            </div>
+          </div>
+
+          <div className="gl" style={{borderRadius:10,padding:14,position:"relative"}}>
+            <Corner sz={7}/>
+            <div style={{fontSize:9,color:"#64748b",letterSpacing:2,marginBottom:10}}>THÔNG TIN TÀI KHOẢN</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {[["Người dùng",session.name],["Email",session.email],["Vai trò",session.role?.toUpperCase()]].map(([lb,v])=>(
+                <div key={lb} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(147,51,234,.07)"}}>
+                  <span style={{fontSize:9,color:"#64748b"}}>{lb}</span>
+                  <span style={{fontSize:10,fontWeight:700,color:lb==="Vai trò"?ROLE_COLOR[session.role]||"#9333ea":"#f1f5f9"}}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {isOwner&&(
+            <button onClick={save} disabled={saving} className="bb gg" style={{padding:"13px",borderRadius:10,fontSize:12,letterSpacing:1}}>
+              {saving?<><Spinner/> ĐANG LƯU...</>:"💾 LƯU CÀI ĐẶT"}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── ROOT APP ───
+function App() {
+  const [session,setSession]=useState(()=>loadSession());
+  const [page,setPage]=useState("dashboard");
+  const [collapsed,setCollapsed]=useState(false);
+
+  if (!session) return (
+    <>
+      <Scanline/>
+      <LoginPage onLogin={s=>{setSession(s);const allowed=ROLE_ACCESS[s.role]||["orders"];setPage(allowed[0]);}}/>
+    </>
+  );
+
+  const logout=()=>{clearSession();setSession(null);};
+
+  const PAGES={
+    dashboard:<Dashboard session={session}/>,
+    orders:<OrdersPage session={session}/>,
+    employees:<EmployeesPage session={session}/>,
+    ingredients:<IngredientsPage session={session}/>,
+    recipes:<RecipesPage session={session}/>,
+    inventory:<InventoryPage session={session}/>,
+    analytics:<AnalyticsPage/>,
+    reports:<ReportsPage/>,
+    settings:<SettingsPage session={session}/>,
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#0a0714",display:"flex"}}>
+      <Scanline/>
+      <Sidebar active={page} onNav={setPage} session={session} onLogout={logout} collapsed={collapsed} onToggle={()=>setCollapsed(p=>!p)}/>
+      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",maxHeight:"100vh"}}>
+        <div className="fu" key={page}>
+          {PAGES[page]||<div style={{padding:24,color:"#475569",fontSize:11}}>Trang không tồn tại</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
