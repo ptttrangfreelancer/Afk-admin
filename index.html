@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <meta name="theme-color" content="#0a0714"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>AFK HUB — Gọi đồ uống</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.9/babel.min.js"></script>
+  <style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0714;font-family:'Courier New',monospace;overflow-x:hidden;color:#fff}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0a0714}::-webkit-scrollbar-thumb{background:#9333ea;border-radius:2px}
+@keyframes gG{0%,100%{box-shadow:0 0 8px rgba(234,179,8,.5),0 0 20px rgba(234,179,8,.2)}50%{box-shadow:0 0 18px rgba(234,179,8,.9),0 0 45px rgba(234,179,8,.4)}}
+@keyframes gP{0%,100%{box-shadow:0 0 8px rgba(147,51,234,.4)}50%{box-shadow:0 0 20px rgba(147,51,234,.8)}}
+@keyframes fU{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sU{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes sL{0%{transform:translateY(-100vh)}100%{transform:translateY(100vh)}}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes sp{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes cB{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.gg{animation:gG 2s ease-in-out infinite}
+.gp{animation:gP 2s ease-in-out infinite}
+.fu{animation:fU .45s ease forwards}
+.su{animation:sU .35s cubic-bezier(.16,1,.3,1) forwards}
+.fl{animation:fl 3.5s ease-in-out infinite}
+.sp{animation:sp 1s linear infinite}
+.ch{animation:cB .5s ease forwards}
+.hv{transition:transform .25s,box-shadow .25s}
+.hv:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(147,51,234,.35),0 0 0 1px rgba(234,179,8,.15)}
+.gl{background:rgba(255,255,255,.04);backdrop-filter:blur(12px);border:1px solid rgba(147,51,234,.2)}
+.glg{background:rgba(234,179,8,.06);backdrop-filter:blur(12px);border:1px solid rgba(234,179,8,.25)}
+.cy{background-image:linear-gradient(rgba(147,51,234,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(147,51,234,.04) 1px,transparent 1px);background-size:40px 40px}
+.tg{color:#eab308;text-shadow:0 0 12px rgba(234,179,8,.55)}
+.tp{color:#a855f7}
+input,select{background:rgba(255,255,255,.05);border:1px solid rgba(147,51,234,.3);color:#fff;outline:none;font-family:'Courier New',monospace;transition:border-color .2s}
+input:focus,select:focus{border-color:#9333ea;box-shadow:0 0 12px rgba(147,51,234,.2)}
+.bb{background:linear-gradient(135deg,#eab308,#f59e0b);color:#0a0714;font-weight:900;border:none;cursor:pointer;transition:all .2s;font-family:'Courier New',monospace;letter-spacing:2px;text-transform:uppercase;position:relative;overflow:hidden}
+.bb::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent,rgba(255,255,255,.12),transparent);transform:rotate(45deg) translateX(-200%);transition:transform .5s}
+.bb:hover::after{transform:rotate(45deg) translateX(200%)}
+.bb:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(234,179,8,.45)}
+.bb:active{transform:translateY(0)}
+.gb{background:transparent;border:1px solid rgba(147,51,234,.45);color:#a855f7;cursor:pointer;transition:all .2s;font-family:'Courier New',monospace}
+.gb:hover{border-color:#a855f7;background:rgba(147,51,234,.1);box-shadow:0 0 14px rgba(147,51,234,.2)}
+  </style>
+</head>
+<body style="margin:0;background:#0a0714">
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useRef} = React;
+
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
+const LOGO  = "data:image/webp;base64,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";
+const FB    = "https://firestore.googleapis.com/v1/projects/afk-hub/databases/(default)/documents";
+const FBKEY = "AIzaSyAiDeA-B1wSCMEZ9FguSKHBjH3653JAwJA";
+const DSC   = "https://discord.com/api/webhooks/1507371598280396831/ieKValC7Jha84Z5HWWBgXBFXNFA-IBvKF7AdcDfk4-2ZdCADOMiVjSZFhJoWv_158vfs";
+const BANK  = { name:"Pham Thi Thu Trang", acc:"14024892118018", code:"TCB" };
+const vietQR = (amt, num) =>
+  `https://img.vietqr.io/image/${BANK.code}-${BANK.acc}-compact2.jpg?amount=${amt}&addInfo=${encodeURIComponent(num)}&accountName=${encodeURIComponent(BANK.name)}`;
+
+// ─────────────────────────────────────────────
+// MENU (fallback nếu Firestore trống)
+// ─────────────────────────────────────────────
+const MENU = [
+  { id:"d1",  cat:"☕ Cà phê",  name:"Cafe đen",             price:15000, g:["#2d1200","#8B4513"], em:"☕", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779587900/ps_833BE62A-3D09-4E51-872C-17D7B779BBBC_jziamx.jpg" },
+  { id:"d2",  cat:"☕ Cà phê",  name:"Cafe sữa",             price:15000, g:["#3d1c00","#C68642"], em:"☕", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588001/ps_5B9CFC44-4B0F-4FC2-956C-48A00D7FF935_clmrnb.jpg" },
+  { id:"d3",  cat:"☕ Cà phê",  name:"Bạc xỉu",              price:18000, g:["#2a1a00","#DEB887"], em:"🥛", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588001/ps_5D02961A-4F42-4A33-A6CD-A5AD76C53347_zqqukz.jpg" },
+  { id:"d4",  cat:"☕ Cà phê",  name:"Cafe muối",            price:23000, g:["#1a1a2a","#7B8AB8"], em:"🧂", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588001/ps_B3B20249-BCCD-4CA2-8615-7781B35B3653_ftvpt5.jpg" },
+  { id:"d5",  cat:"☕ Cà phê",  name:"Cafe Caramel",         price:23000, g:["#3d1500","#FF8C00"], em:"🍮", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588001/ps_5D82FE28-263F-40FE-8801-D4DE50AE2842_qktf5i.jpg" },
+  { id:"d6",  cat:"☕ Cà phê",  name:"Cafe Cacao",           price:25000, g:["#1a0a00","#6B3A2A"], em:"🍫", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588001/ps_B3FAEA1C-0FA6-4689-AC89-84ACC328E082_wl42yz.jpg" },
+  { id:"d7",  cat:"🍵 Matcha",  name:"Matcha Latte Nhật",    price:35000, g:["#0a2010","#2E8B57"], em:"🍵", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588001/ps_C3C17F26-7CAA-4A58-A684-5068A82B09CA_g10mm8.jpg" },
+  { id:"d8",  cat:"🍵 Matcha",  name:"Matcha Caramel Nhật",  price:35000, g:["#0d2515","#4CAF50"], em:"🍵", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588002/ps_13748278-1F7A-4B9A-A72B-8F18DADF1758_bkttli.jpg" },
+  { id:"d9",  cat:"🍊 Trà",     name:"Trà tắc xí muội",     price:20000, g:["#3d0a00","#FF6347"], em:"🍊", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588002/ps_62786006-D34D-4B34-B17F-6C550A7738EF_fuahxs.jpg" },
+  { id:"d10", cat:"🍊 Trà",     name:"Trà sữa truyền thống", price:30000, g:["#2d1500","#CD853F"], em:"🧋", img:"https://res.cloudinary.com/durp3ffh5/image/upload/v1779588002/ps_C8E2B896-A551-434C-B743-FD5569B8E402_bxcjj0.jpg" },
+];
+const SW = ["Nhiều nhiều","Vừa vừa","Ít ít"];
+const NICKNAMES = [
+  "Lạc Đà phun mưa","Rái Cá thong dong","Cú Mèo cau có",
+  "Sóc Nâu kiêu kỳ","Hải Ly lầm lì","Ong Vàng Cần Mẫn",
+  "Cá Heo đáng yêu","Thỏ Trắng ngây thơ","Gấu đi xe đạp","Én lượn mòng mòng",
+  "Bé mèo kiêu kỳ","Sói xám cay cú","Heo hồng núng nính","Đà điểu hướng nội",
+];
+function randomNick(current) {
+  const pool = NICKNAMES.filter(n => n !== current);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ─────────────────────────────────────────────
+// MENU GROUPING HELPERS
+// ─────────────────────────────────────────────
+const CAT_ORDER = ["☕ Cà phê","🍵 Matcha","🧋 Trà sữa","🍊 Trà","🥤 Khác"];
+const CAT_COLOR = {
+  "☕ Cà phê": "#8B4513",
+  "🍵 Matcha":  "#2E8B57",
+  "🧋 Trà sữa": "#CD853F",
+  "🍊 Trà":     "#FF6347",
+  "🥤 Khác":    "#9333ea",
+};
+
+// Size options: delta là phần chênh lệch giá so với giá gốc (size M)
+const SIZE_CONFIG = {
+  "☕ Cà phê": [
+    { label:"S", delta:0,    desc:"Nhỏ" },
+    { label:"M", delta:3000, desc:"Vừa" },
+  ],
+  "🍵 Matcha": [
+    { label:"M", delta:0,     desc:"Vừa" },
+    { label:"L", delta:5000,  desc:"Lớn" },
+  ],
+  "🧋 Trà sữa": [
+    { label:"M", delta:0,     desc:"Vừa" },
+    { label:"L", delta:5000,  desc:"Lớn" },
+  ],
+  "🍊 Trà": [
+    { label:"M", delta:0,     desc:"Vừa" },
+    { label:"L", delta:5000,  desc:"Lớn" },
+  ],
+};
+
+function getSizes(cat) {
+  return SIZE_CONFIG[cat] || [];
+}
+
+function detectCat(item) {
+  if (item.cat) return item.cat;
+  if (item.category) return item.category;
+  const n = (item.name || "").toLowerCase();
+  if (n.includes("matcha"))                              return "🍵 Matcha";
+  if (n.includes("trà sữa") || n.includes("tra sua"))  return "🧋 Trà sữa";
+  if (n.includes("trà") || n.includes("tra "))          return "🍊 Trà";
+  if (n.includes("cafe") || n.includes("bạc xỉu") || n.includes("bac xiu")) return "☕ Cà phê";
+  return "🥤 Khác";
+}
+
+function groupMenu(items) {
+  const map = {};
+  items.forEach(item => {
+    const c = detectCat(item);
+    if (!map[c]) map[c] = [];
+    map[c].push(item);
+  });
+  return CAT_ORDER.filter(c => map[c]).map(c => ({ cat:c, items:map[c] }));
+}
+
+const vnd = n => n.toLocaleString("vi-VN") + "đ";
+
+// ─────────────────────────────────────────────
+// FIRESTORE ORDER HELPERS
+// ─────────────────────────────────────────────
+function toFV(v) {
+  if (typeof v === "number") return { integerValue: String(v) };
+  if (typeof v === "string") return { stringValue: v };
+  if (Array.isArray(v)) return {
+    arrayValue: {
+      values: v.map(i => ({
+        mapValue: { fields: {
+          id:        { stringValue: i.id        || "" },
+          name:      { stringValue: i.name      || "" },
+          em:        { stringValue: i.em        || "" },
+          price:     { integerValue: String(i.price || 0) },
+          qty:       { integerValue: String(i.qty   || 1) },
+          sweetness: { stringValue: i.sweetness || "" },
+          size:      { stringValue: i.size      || "" },
+        }}
+      }))
+    }
+  };
+  return { stringValue: String(v) };
+}
+
+const ST = {
+  async getCounter() {
+    try {
+      const res  = await fetch(`${FB}/counters/orderCounter?key=${FBKEY}`);
+      const data = await res.json();
+      return parseInt(data.fields?.value?.integerValue || 100);
+    } catch { return 100; }
+  },
+  async incCounter() {
+    const n = (await this.getCounter()) + 1;
+    try {
+      await fetch(`${FB}/counters/orderCounter?updateMask.fieldPaths=value&key=${FBKEY}`, {
+        method:  "PATCH",
+        headers: { "Content-Type":"application/json" },
+        body:    JSON.stringify({ fields: { value: { integerValue: String(n) } } }),
+      });
+    } catch {}
+    return n;
+  },
+  async postOrder(order) {
+    try {
+      const fields = {};
+      Object.entries(order).forEach(([k,v]) => { fields[k] = toFV(v); });
+      await fetch(`${FB}/orders?key=${FBKEY}`, {
+        method:  "POST",
+        headers: { "Content-Type":"application/json" },
+        body:    JSON.stringify({ fields }),
+      });
+    } catch(e) { console.error("postOrder:", e); }
+  },
+};
+
+// ─────────────────────────────────────────────
+// DISCORD
+// ─────────────────────────────────────────────
+async function sendDiscord(order) {
+  const lines = order.items.map(i => i.qty+"x "+i.name+(i.size?" ["+i.size+"]":"")+(i.sweetness?" ("+i.sweetness+")":"")).join("\n");
+  const pay   = order.paymentMethod === "cash" ? "💵 Tiền mặt" : "🏦 Chuyển khoản";
+  const kh    = order.customerName ? "👤 **"+order.customerName+"**"+(order.customerPhone?" · "+order.customerPhone:"")+"\n" : "";
+  const note  = order.note ? "📝 "+order.note+"\n" : "";
+  const msg   = "⚡ **ĐƠN MỚI — "+order.orderNumber+"**\n"+kh+note+"```\n"+lines+"\n```\n💰 **"+vnd(order.total)+"** · "+pay;
+  try {
+    const res = await fetch(DSC, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({content:msg}) });
+    return { ok:res.ok, status:res.status };
+  } catch(e) {
+    return { ok:false, error:e.message };
+  }
+}
+
+// ─────────────────────────────────────────────
+// MENU LOADER (từ Firestore)
+// ─────────────────────────────────────────────
+async function fsLoadMenu() {
+  try {
+    const res  = await fetch(`${FB}/menu?key=${FBKEY}&pageSize=100`);
+    const data = await res.json();
+    if (!data.documents || !data.documents.length) return [];
+    return data.documents
+      .map(doc => {
+        const f  = doc.fields || {};
+        const id = doc.name.split("/").pop();
+        return {
+          firestoreId: id,
+          id,
+          name:      f.name?.stringValue      || "",
+          price:     parseInt(f.sellPrice?.integerValue || 0),
+          img:       f.imageUrl?.stringValue  || "",
+          available: f.available?.booleanValue !== false,
+          g:         ["#2d1200","#8B4513"],
+          em:        "☕",
+        };
+      })
+      .filter(i => i.available !== false && i.name);
+  } catch(e) { console.warn("fsLoadMenu:", e.message); return []; }
+}
+
+// ─────────────────────────────────────────────
+// VOUCHER HELPERS
+// ─────────────────────────────────────────────
+function parseVoucher(doc) {
+  const f = doc.fields || {};
+  return {
+    firestoreId:  doc.name.split("/").pop(),
+    code:         (f.code?.stringValue        || "").toUpperCase(),
+    discount:     parseInt(f.discount?.integerValue  || 0),
+    discountType: f.discountType?.stringValue || "fixed",
+    customerName: f.customerName?.stringValue || "",
+    phone:        f.phone?.stringValue        || "",
+    maxUses:      parseInt(f.maxUses?.integerValue    || 1),
+    usedCount:    parseInt(f.usedCount?.integerValue  || 0),
+    active:       f.active?.booleanValue !== false,
+    expireDate:   f.expireDate?.stringValue   || "",
+    note:         f.note?.stringValue         || "",
+    createdAt:    f.createdAt?.stringValue    || "",
+  };
+}
+
+async function fsGetVoucherByCode(code) {
+  try {
+    const res  = await fetch(`${FB}/vouchers?key=${FBKEY}&pageSize=200`);
+    const data = await res.json();
+    if (!data.documents) return null;
+    const doc = data.documents.find(
+      d => (d.fields?.code?.stringValue || "").toUpperCase() === code.toUpperCase().trim()
+    );
+    return doc ? parseVoucher(doc) : null;
+  } catch(e) { return null; }
+}
+
+async function fsIncrementVoucherUse(firestoreId, currentUsed) {
+  await fetch(`${FB}/vouchers/${firestoreId}?updateMask.fieldPaths=usedCount&key=${FBKEY}`, {
+    method: "PATCH", headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({ fields: { usedCount: { integerValue: String(currentUsed + 1) } } }),
+  });
+}
+
+function applyVoucher(voucher, cartTotal) {
+  if (!voucher)                   return { valid:false, error:"Mã không tồn tại",          amount:0 };
+  if (!voucher.active)            return { valid:false, error:"Mã đã bị vô hiệu hoá",      amount:0 };
+  if (voucher.expireDate && new Date(voucher.expireDate) < new Date())
+                                  return { valid:false, error:"Mã đã hết hạn",              amount:0 };
+  if (voucher.usedCount >= voucher.maxUses)
+                                  return { valid:false, error:"Mã đã dùng hết lượt",        amount:0 };
+  const amount = voucher.discountType === "percent"
+    ? Math.round(cartTotal * voucher.discount / 100)
+    : Math.min(voucher.discount, cartTotal);
+  return { valid:true, error:null, amount };
+}
+
+// ─────────────────────────────────────────────
+// MICRO COMPONENTS
+// ─────────────────────────────────────────────
+function Scanline() {
+  return <div style={{position:"fixed",top:0,left:0,right:0,height:"3px",background:"linear-gradient(transparent,rgba(147,51,234,.1),transparent)",animation:"sL 5s linear infinite",pointerEvents:"none",zIndex:9999}} />;
+}
+
+function Corner({ sz=10, c="#9333ea" }) {
+  const b = (t,r,b2,l) => ({
+    position:"absolute", width:sz, height:sz, pointerEvents:"none",
+    borderTop:    t  ? `1.5px solid ${c}` : undefined,
+    borderRight:  r  ? `1.5px solid ${c}` : undefined,
+    borderBottom: b2 ? `1.5px solid ${c}` : undefined,
+    borderLeft:   l  ? `1.5px solid ${c}` : undefined,
+  });
+  return (
+    <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
+      <div style={{...b(1,0,0,1), top:0, left:0}} />
+      <div style={{...b(1,1,0,0), top:0, right:0}} />
+      <div style={{...b(0,0,1,1), bottom:0, left:0}} />
+      <div style={{...b(0,1,1,0), bottom:0, right:0}} />
+    </div>
+  );
+}
+
+function Toast({ msg, ok }) {
+  return (
+    <div style={{
+      position:"fixed", top:16, left:"50%", transform:"translateX(-50%)",
+      zIndex:9998, whiteSpace:"nowrap",
+      background: ok ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)",
+      border: `1px solid ${ok ? "rgba(34,197,94,.5)" : "rgba(239,68,68,.5)"}`,
+      backdropFilter:"blur(12px)", borderRadius:10, padding:"10px 18px",
+      fontSize:11, fontWeight:700, letterSpacing:1,
+      color: ok ? "#22c55e" : "#ef4444",
+      boxShadow: `0 0 20px ${ok ? "rgba(34,197,94,.3)" : "rgba(239,68,68,.3)"}`,
+    }}>
+      {msg}
+    </div>
+  );
+}
+
+function CopyBtn({ text }) {
+  const [ok, setOk] = useState(false);
+  const go = () => { try { navigator.clipboard.writeText(text); } catch {} setOk(true); setTimeout(()=>setOk(false),1500); };
+  return (
+    <button onClick={go} className="gb" style={{padding:"3px 9px",borderRadius:4,fontSize:11,display:"flex",alignItems:"center",gap:3}}>
+      {ok
+        ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      } {ok?"✓":"Copy"}
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────
+// PRODUCT CARD
+// ─────────────────────────────────────────────
+function ProductCard({ item, onAdd }) {
+  const [sw, setSw]         = useState("Vừa vừa");
+  const [flash, setFlash]   = useState(false);
+  const [imgErr, setImgErr] = useState(false);
+
+  // Size
+  const sizes      = getSizes(detectCat(item));
+  const defaultSz  = sizes.find(s => s.delta === 0) || sizes[0] || null;
+  const [sz, setSz]= useState(defaultSz);
+  const finalPrice = item.price + (sz ? sz.delta : 0);
+
+  const add = () => {
+    onAdd({ ...item, sweetness:sw, size:sz?sz.label:"", price:finalPrice, qty:1, cartId: Date.now()+Math.random() });
+    setFlash(true); setTimeout(()=>setFlash(false), 600);
+  };
+
+  return (
+    <div className="gl hv" style={{borderRadius:12,padding:12,position:"relative",overflow:"hidden",boxShadow:flash?"0 0 22px rgba(234,179,8,.6)":undefined}}>
+      <Corner sz={7} c={flash?"#eab308":"#7c3aed"} />
+      <div style={{width:"100%",aspectRatio:"1/1",borderRadius:8,marginBottom:10,
+        background:`linear-gradient(135deg,${item.g[0]},${item.g[1]})`,
+        position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:40}}>
+        {item.img && !imgErr
+          ? <img src={item.img} alt={item.name} onError={()=>setImgErr(true)}
+              style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} />
+          : <span style={{filter:"drop-shadow(0 0 8px rgba(234,179,8,.4))"}}>{item.em}</span>
+        }
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,transparent 60%,rgba(0,0,0,.3))"}} />
+      </div>
+      <div style={{fontWeight:700,fontSize:12,marginBottom:3,color:"#f1f5f9",lineHeight:1.3}}>{item.name}</div>
+      <div className="tg" style={{fontSize:14,fontWeight:900,marginBottom:8}}>{vnd(finalPrice)}</div>
+
+      {/* Size buttons */}
+      {sizes.length > 0 && (
+        <div style={{display:"flex",gap:5,marginBottom:8}}>
+          {sizes.map(s => {
+            const active = sz && sz.label === s.label;
+            return (
+              <button key={s.label} onClick={()=>setSz(s)} style={{
+                flex:1, padding:"5px 4px", borderRadius:6, cursor:"pointer",
+                fontFamily:"'Courier New',monospace", transition:"all .18s",
+                background: active ? "linear-gradient(135deg,#eab308,#f59e0b)" : "rgba(255,255,255,.05)",
+                color:      active ? "#0a0714" : "#94a3b8",
+                border:     active ? "none" : "1px solid rgba(147,51,234,.25)",
+                boxShadow:  active ? "0 0 10px rgba(234,179,8,.35)" : "none",
+              }}>
+                <div style={{fontSize:11,fontWeight:900,lineHeight:1.2}}>{s.label}</div>
+                {s.delta !== 0 && (
+                  <div style={{fontSize:8,marginTop:1,opacity:.85}}>
+                    {s.delta > 0 ? "+" : ""}{(s.delta/1000).toFixed(0)}k
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:9,color:"#64748b",letterSpacing:1,marginBottom:3}}>MỨC NGỌT</div>
+        <select value={sw} onChange={e=>setSw(e.target.value)} style={{width:"100%",padding:"5px 7px",borderRadius:6,fontSize:10,cursor:"pointer"}}>
+          {SW.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+      <button onClick={add} className="bb" style={{width:"100%",padding:"7px",borderRadius:7,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> THÊM
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// CART DRAWER
+// ─────────────────────────────────────────────
+function CartDrawer({ cart, setCart, onClose, onCheckout }) {
+  const total = cart.reduce((s,i) => s + i.price*i.qty, 0);
+  const upd   = (id, d) => setCart(p => p.map(i => i.cartId===id ? {...i,qty:i.qty+d} : i).filter(i=>i.qty>0));
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:500,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+      <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,.72)",backdropFilter:"blur(4px)"}} />
+      <div className="su" style={{position:"relative",background:"#120a2e",borderRadius:"18px 18px 0 0",
+        border:"1px solid rgba(147,51,234,.4)",borderBottom:"none",padding:"18px 16px 32px",
+        maxHeight:"76vh",display:"flex",flexDirection:"column"}}>
+        <div style={{width:36,height:3,background:"rgba(147,51,234,.5)",borderRadius:2,margin:"0 auto 14px"}} />
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <span className="tg" style={{fontWeight:900,fontSize:14,letterSpacing:2}}>🛒 GIỎ HÀNG</span>
+          <button onClick={onClose} className="gb" style={{padding:"4px 8px",borderRadius:6}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        {cart.length === 0
+          ? <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontSize:12}}>Chưa có món nào 🍃</div>
+          : <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:7}}>
+              {cart.map(item => (
+                <div key={item.cartId} className="gl" style={{borderRadius:8,padding:"9px 11px",display:"flex",alignItems:"center",gap:9}}>
+                  <span style={{fontSize:18}}>{item.em}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:11,color:"#f1f5f9",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.name}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:5,marginTop:1,flexWrap:"wrap"}}>
+                      {item.size && <span style={{background:"rgba(234,179,8,.15)",color:"#eab308",border:"1px solid rgba(234,179,8,.35)",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:900,letterSpacing:1}}>Size {item.size}</span>}
+                      {item.sweetness && <span style={{fontSize:9,color:"#64748b"}}>{item.sweetness}</span>}
+                    </div>
+                    <div className="tg" style={{fontSize:11,fontWeight:700}}>{vnd(item.price)}</div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <button onClick={()=>upd(item.cartId,-1)} className="gb" style={{width:22,height:22,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                    <span style={{minWidth:14,textAlign:"center",fontWeight:700,fontSize:12}}>{item.qty}</span>
+                    <button onClick={()=>upd(item.cartId,1)} className="gb" style={{width:22,height:22,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+        }
+        {cart.length > 0 && (
+          <div style={{marginTop:14,borderTop:"1px solid rgba(147,51,234,.2)",paddingTop:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+              <span style={{color:"#94a3b8",fontSize:12}}>Tổng cộng</span>
+              <span className="tg" style={{fontWeight:900,fontSize:16}}>{vnd(total)}</span>
+            </div>
+            <button onClick={onCheckout} className="bb gg" style={{width:"100%",padding:"13px",borderRadius:10,fontSize:13}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline",marginRight:5}}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              THANH TOÁN · {vnd(total)}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MENU PAGE (ordering flow)
+// ─────────────────────────────────────────────
+function MenuPage({ cart, setCart, onBack, menuItems, customer }) {
+  const [sub,           setSub]          = useState("menu");
+  const [cartOpen,      setCartOpen]     = useState(false);
+  const [payM,          setPayM]         = useState("cash");
+  const [ordNum,        setOrdNum]       = useState("");
+  const [order,         setOrder]        = useState(null);
+  const [placing,       setPlacing]      = useState(false);
+  const [toast,         setToast]        = useState(null);
+  const [note,          setNote]         = useState("");
+  // Voucher
+  const [voucherCode,    setVoucherCode]   = useState("");
+  const [voucher,        setVoucher]       = useState(null);
+  const [voucherResult,  setVoucherResult] = useState(null);
+  const [voucherLoading, setVoucherLoading]= useState(false);
+
+  const subtotal    = cart.reduce((s,i) => s + i.price*i.qty, 0);
+  const discountAmt = voucherResult?.valid ? voucherResult.amount : 0;
+  const total       = subtotal - discountAmt;
+  const count       = cart.reduce((s,i) => s + i.qty, 0);
+
+  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),4000); };
+
+  const addToCart = item => {
+    setCart(p => {
+      const same = p.find(x => x.id===item.id && x.sweetness===item.sweetness && x.size===item.size);
+      return same ? p.map(x => x.cartId===same.cartId ? {...x,qty:x.qty+1} : x) : [...p,item];
+    });
+  };
+
+  const checkVoucher = async () => {
+    const code = voucherCode.trim().toUpperCase();
+    if (!code) return;
+    setVoucherLoading(true); setVoucherResult(null); setVoucher(null);
+    const v = await fsGetVoucherByCode(code);
+    const result = applyVoucher(v, subtotal);
+    setVoucher(v); setVoucherResult(result);
+    setVoucherLoading(false);
+  };
+
+  const clearVoucher = () => {
+    setVoucherCode(""); setVoucher(null); setVoucherResult(null);
+  };
+
+  const goCheckout = async () => {
+    if (!cart.length) return;
+    const n = await ST.incCounter();
+    setOrdNum("AFK-"+n);
+    setCartOpen(false);
+    setSub("checkout");
+  };
+
+  const placeOrder = async () => {
+    setPlacing(true);
+    const o = {
+      orderNumber:ordNum, items:cart, subtotal, discount:discountAmt, total,
+      paymentMethod:payM, status:"pending",
+      customerName:  customer?.name  || "",
+      customerPhone: customer?.phone || "",
+      note:          note.trim(),
+      voucherCode:   voucher?.code        || "",
+      voucherCustomer: voucher?.customerName || "",
+      createdAt:new Date().toISOString(),
+    };
+    await ST.postOrder(o);
+    if (voucher?.firestoreId && voucherResult?.valid) {
+      await fsIncrementVoucherUse(voucher.firestoreId, voucher.usedCount).catch(()=>{});
+    }
+    await sendDiscord(o);
+    setOrder(o);
+    setPlacing(false);
+    setSub(payM === "bank_transfer" ? "payment" : "success");
+  };
+
+  // ── SUCCESS ──
+  if (sub === "success") return (
+    <div style={{minHeight:"100vh",background:"radial-gradient(ellipse at center,#0a1f14 0%,#0a0714 70%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,textAlign:"center"}}>
+      {toast && <Toast {...toast}/>}
+      <div className="ch" style={{width:90,height:90,borderRadius:"50%",background:"rgba(34,197,94,.1)",border:"2px solid rgba(34,197,94,.45)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 40px rgba(34,197,94,.25)",marginBottom:20}}>
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style={{fontSize:9,letterSpacing:4,color:"rgba(34,197,94,.7)",marginBottom:6}}>ĐẶT HÀNG THÀNH CÔNG</div>
+      <div className="tg" style={{fontSize:36,fontWeight:900,letterSpacing:4,marginBottom:4,textShadow:"0 0 20px rgba(234,179,8,.8),0 0 50px rgba(234,179,8,.35)"}}>{order?.orderNumber}</div>
+      {order?.customerName&&(
+        <div style={{marginBottom:8,display:"flex",alignItems:"center",gap:6,background:"rgba(147,51,234,.12)",border:"1px solid rgba(147,51,234,.25)",borderRadius:8,padding:"6px 14px"}}>
+          <span style={{fontSize:14}}>👤</span>
+          <span style={{fontWeight:700,fontSize:13,color:"#f1f5f9"}}>{order.customerName}</span>
+          {order.customerPhone&&<span style={{fontSize:10,color:"#64748b"}}>· {order.customerPhone}</span>}
+        </div>
+      )}
+      <div style={{fontSize:10,color:"#64748b",marginBottom:20,letterSpacing:1}}>{order?.paymentMethod==="cash"?"💵 THANH TOÁN KHI NHẬN":"🏦 ĐÃ CHUYỂN KHOẢN"}</div>
+      <div className="gl" style={{borderRadius:12,padding:"13px 15px",width:"100%",maxWidth:310,marginBottom:20,border:"1px solid rgba(34,197,94,.18)",position:"relative"}}>
+        <Corner sz={7} c="#22c55e"/>
+        {order?.items.map((i,idx)=>(
+          <div key={idx} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid rgba(147,51,234,.08)"}}>
+            <span style={{fontSize:11,color:"#94a3b8"}}>{i.qty}x {i.name}{i.size && <span style={{marginLeft:4,color:"#eab308",fontSize:9,fontWeight:700}}>[{i.size}]</span>}</span>
+            <span style={{fontSize:11,fontWeight:700}}>{vnd(i.price*i.qty)}</span>
+          </div>
+        ))}
+        {order?.discount>0&&(
+          <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(147,51,234,.08)"}}>
+            <span style={{fontSize:11,color:"#22c55e"}}>🎟️ {order.voucherCode}</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#22c55e"}}>-{vnd(order.discount)}</span>
+          </div>
+        )}
+        <div style={{display:"flex",justifyContent:"space-between",paddingTop:9,marginTop:3}}>
+          <span style={{fontWeight:700,letterSpacing:2,fontSize:11}}>TỔNG</span>
+          <span className="tg" style={{fontWeight:900,fontSize:15}}>{vnd(order?.total||0)}</span>
+        </div>
+      </div>
+      {order?.note&&(
+        <div style={{width:"100%",maxWidth:310,marginBottom:12,padding:"8px 14px",background:"rgba(234,179,8,.06)",border:"1px solid rgba(234,179,8,.2)",borderRadius:8,fontSize:10,color:"#ca8a04",textAlign:"left"}}>
+          📝 <span style={{color:"#94a3b8"}}>{order.note}</span>
+        </div>
+      )}
+      <div style={{fontSize:11,color:"#64748b",marginBottom:22,lineHeight:1.9}}>🙏 Cảm ơn bạn đã ủng hộ<br/><span className="tp">AFK HUB</span> ⚡</div>
+      <button onClick={()=>{setCart([]);setSub("menu");}} className="gb" style={{padding:"11px 30px",borderRadius:10,fontSize:11,letterSpacing:2}}>← GỌI ĐƠN MỚI</button>
+    </div>
+  );
+
+  // ── PAYMENT ──
+  if (sub === "payment") return (
+    <div style={{minHeight:"100vh",background:"#0a0714",paddingBottom:40}}>
+      {toast && <Toast {...toast}/>}
+      <div style={{background:"rgba(10,7,20,.95)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(147,51,234,.2)",padding:"12px 15px",display:"flex",alignItems:"center",gap:10,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>setSub("checkout")} className="gb" style={{padding:"5px 9px",borderRadius:6,fontSize:11,display:"flex",alignItems:"center",gap:3}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back
+        </button>
+        <div className="tg" style={{fontWeight:900,letterSpacing:2,fontSize:12}}>CHUYỂN KHOẢN</div>
+      </div>
+      <div style={{padding:"18px 15px"}}>
+        <div style={{textAlign:"center",marginBottom:18}}>
+          <div style={{fontSize:8,letterSpacing:4,color:"#64748b",marginBottom:3}}>MÃ ĐƠN HÀNG</div>
+          <div className="tg" style={{fontSize:34,fontWeight:900,letterSpacing:4,textShadow:"0 0 20px rgba(234,179,8,.8),0 0 45px rgba(234,179,8,.35)"}}>{ordNum}</div>
+        </div>
+        <div className="gl" style={{borderRadius:14,padding:14,marginBottom:14,textAlign:"center",position:"relative"}}>
+          <Corner sz={9} c="#eab308"/>
+          <div style={{fontSize:9,letterSpacing:3,color:"#64748b",marginBottom:10}}>QUÉT MÃ QR ĐỂ THANH TOÁN</div>
+          <div style={{background:"#fff",borderRadius:10,padding:8,display:"inline-block",boxShadow:"0 0 28px rgba(234,179,8,.35)"}}>
+            <img src={vietQR(total,ordNum)} alt="QR" style={{width:190,height:190,display:"block"}}/>
+          </div>
+          <div style={{marginTop:8,fontSize:9,color:"rgba(234,179,8,.6)",letterSpacing:1}}>Tự động điền số tiền & nội dung</div>
+        </div>
+        <div className="gl" style={{borderRadius:11,padding:"12px 14px",marginBottom:13,position:"relative"}}>
+          <Corner sz={7}/>
+          {[["Ngân hàng","Techcombank"],["Chủ TK",BANK.name],["Số TK",BANK.acc],["Số tiền",vnd(total)]].map(([lb,val])=>(
+            <div key={lb} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid rgba(147,51,234,.08)"}}>
+              <div style={{fontSize:9,color:"#64748b",letterSpacing:1}}>{lb}</div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontWeight:700,fontSize:12,color:lb==="Số tiền"?"#eab308":"#f1f5f9"}}>{val}</span>
+                {(lb==="Số TK"||lb==="Số tiền") && <CopyBtn text={lb==="Số tiền"?String(total):val}/>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="glg" style={{borderRadius:9,padding:"9px 13px",marginBottom:18,position:"relative"}}>
+          <Corner sz={7} c="#eab308"/>
+          <div style={{fontSize:9,color:"#ca8a04",letterSpacing:2,marginBottom:3}}>NỘI DUNG CHUYỂN KHOẢN</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontWeight:700,fontSize:13,color:"#eab308"}}>{ordNum}</span>
+            <CopyBtn text={ordNum}/>
+          </div>
+        </div>
+        <button onClick={()=>setSub("success")} className="bb gg" style={{width:"100%",padding:"15px",borderRadius:11,fontSize:13,letterSpacing:2,position:"relative",overflow:"hidden",marginBottom:9}}>
+          <Corner sz={9} c="rgba(0,0,0,.25)"/>✅ ĐÃ CHUYỂN KHOẢN
+        </button>
+        <div style={{textAlign:"center",fontSize:9,color:"#475569",letterSpacing:1}}>💡 Screenshot màn hình này nếu cần</div>
+      </div>
+    </div>
+  );
+
+  // ── CHECKOUT ──
+  if (sub === "checkout") return (
+    <div style={{minHeight:"100vh",background:"#0a0714",paddingBottom:40}}>
+      <div style={{background:"rgba(10,7,20,.95)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(147,51,234,.2)",padding:"12px 15px",display:"flex",alignItems:"center",gap:10,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>setSub("menu")} className="gb" style={{padding:"5px 9px",borderRadius:6,fontSize:11,display:"flex",alignItems:"center",gap:3}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back
+        </button>
+        <div>
+          <div style={{fontSize:8,color:"#64748b",letterSpacing:3}}>ĐƠN HÀNG</div>
+          <div className="tg" style={{fontWeight:900,letterSpacing:2,fontSize:13}}>{ordNum}</div>
+        </div>
+      </div>
+      <div style={{padding:"15px"}}>
+        {/* Thông tin khách hàng */}
+        {customer?.name&&(
+          <div className="gl" style={{borderRadius:9,padding:"10px 13px",marginBottom:12,display:"flex",alignItems:"center",gap:10,position:"relative"}}>
+            <Corner sz={6} c="#9333ea"/>
+            <span style={{fontSize:18}}>👤</span>
+            <div>
+              <div style={{fontWeight:700,fontSize:12,color:"#f1f5f9"}}>{customer.name}</div>
+              {customer.phone&&<div style={{fontSize:10,color:"#64748b"}}>{customer.phone}</div>}
+            </div>
+          </div>
+        )}
+        <div style={{fontSize:9,letterSpacing:3,color:"#64748b",marginBottom:7}}>CHI TIẾT MÓN</div>
+        <div className="gl" style={{borderRadius:10,overflow:"hidden",marginBottom:14,position:"relative"}}>
+          <Corner sz={7}/>
+          {cart.map((item,i)=>(
+            <div key={item.cartId} style={{padding:"11px 13px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:i<cart.length-1?"1px solid rgba(147,51,234,.08)":"none"}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:12}}>{item.qty}x {item.name}{item.size && <span style={{marginLeft:5,background:"rgba(234,179,8,.15)",color:"#eab308",border:"1px solid rgba(234,179,8,.3)",borderRadius:3,padding:"0 5px",fontSize:9,fontWeight:900}}>Size {item.size}</span>}</div>
+                {item.sweetness && <div style={{fontSize:9,color:"#64748b"}}>{item.sweetness}</div>}
+              </div>
+              <div className="tg" style={{fontWeight:700,fontSize:12}}>{vnd(item.price*item.qty)}</div>
+            </div>
+          ))}
+        </div>
+        {/* Voucher */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:9,letterSpacing:3,color:"#64748b",marginBottom:7}}>MÃ GIẢM GIÁ (tuỳ chọn)</div>
+          <div style={{display:"flex",gap:7}}>
+            <input
+              value={voucherCode}
+              onChange={e=>{ setVoucherCode(e.target.value.toUpperCase()); setVoucherResult(null); setVoucher(null); }}
+              onKeyDown={e=>e.key==="Enter"&&checkVoucher()}
+              placeholder="Nhập mã voucher..."
+              disabled={voucherResult?.valid}
+              style={{flex:1,padding:"9px 12px",borderRadius:8,fontSize:12,
+                borderColor:voucherResult?(voucherResult.valid?"rgba(34,197,94,.6)":"rgba(239,68,68,.5)"):"rgba(147,51,234,.3)",
+                opacity:voucherResult?.valid?.7:1,
+              }}
+            />
+            {voucherResult?.valid
+              ? <button onClick={clearVoucher} className="gb" style={{padding:"9px 12px",borderRadius:8,fontSize:11,color:"#ef4444",borderColor:"rgba(239,68,68,.4)"}}>✕ Xoá</button>
+              : <button onClick={checkVoucher} disabled={voucherLoading||!voucherCode.trim()} className="gb"
+                  style={{padding:"9px 12px",borderRadius:8,fontSize:11,whiteSpace:"nowrap",opacity:(!voucherCode.trim()||voucherLoading)?.5:1}}>
+                  {voucherLoading?"...":"Áp dụng"}
+                </button>
+            }
+          </div>
+          {voucherResult&&(
+            <div style={{marginTop:7,padding:"8px 12px",borderRadius:7,fontSize:11,fontWeight:700,
+              background:voucherResult.valid?"rgba(34,197,94,.1)":"rgba(239,68,68,.1)",
+              border:`1px solid ${voucherResult.valid?"rgba(34,197,94,.4)":"rgba(239,68,68,.4)"}`,
+              color:voucherResult.valid?"#22c55e":"#ef4444"}}>
+              {voucherResult.valid
+                ?`✅ Áp dụng thành công — Giảm ${vnd(voucherResult.amount)}${voucher?.customerName?` cho ${voucher.customerName}`:""}`
+                :`❌ ${voucherResult.error}`}
+            </div>
+          )}
+        </div>
+
+        {/* Total */}
+        <div className="glg" style={{borderRadius:10,padding:"13px 15px",marginBottom:18,position:"relative"}}>
+          <Corner sz={7} c="#eab308"/>
+          {discountAmt>0&&(
+            <>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <span style={{color:"#94a3b8",fontSize:11}}>Tạm tính</span>
+                <span style={{fontSize:13,color:"#94a3b8"}}>{vnd(subtotal)}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <span style={{color:"#22c55e",fontSize:11}}>🎟️ {voucher?.code}</span>
+                <span style={{fontSize:13,fontWeight:700,color:"#22c55e"}}>-{vnd(discountAmt)}</span>
+              </div>
+              <div style={{borderTop:"1px solid rgba(234,179,8,.2)",paddingTop:8}}/>
+            </>
+          )}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{color:"#94a3b8",fontSize:12,letterSpacing:1}}>TỔNG CỘNG</span>
+            <span className="tg" style={{fontSize:22,fontWeight:900}}>{vnd(total)}</span>
+          </div>
+        </div>
+        {/* Ghi chú */}
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:9,letterSpacing:3,color:"#64748b",marginBottom:7}}>GHI CHÚ (tuỳ chọn)</div>
+          <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2}
+            placeholder="VD: ít đá, không đường, đem lên bàn số 5..."
+            style={{width:"100%",padding:"9px 12px",borderRadius:8,fontSize:11,resize:"none",
+              background:"rgba(255,255,255,.05)",border:"1px solid rgba(147,51,234,.3)",
+              color:"#fff",outline:"none",fontFamily:"'Courier New',monospace",lineHeight:1.5}}/>
+        </div>
+        <div style={{fontSize:9,letterSpacing:3,color:"#64748b",marginBottom:9}}>PHƯƠNG THỨC THANH TOÁN</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:22}}>
+          {[["cash","💵 Tiền mặt"],["bank_transfer","🏦 Chuyển khoản"]].map(([v,lb])=>(
+            <button key={v} onClick={()=>setPayM(v)} style={{padding:"13px 10px",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .2s",fontFamily:"'Courier New',monospace",
+              background:payM===v?"linear-gradient(135deg,#eab308,#f59e0b)":"rgba(255,255,255,.04)",
+              color:payM===v?"#0a0714":"#94a3b8",border:payM===v?"none":"1px solid rgba(147,51,234,.2)",
+              boxShadow:payM===v?"0 0 20px rgba(234,179,8,.35)":"none"}}>
+              {lb}
+            </button>
+          ))}
+        </div>
+        <button onClick={placeOrder} disabled={placing} className="bb gg" style={{width:"100%",padding:"15px",borderRadius:11,fontSize:13,letterSpacing:2,position:"relative",overflow:"hidden",opacity:placing?.7:1}}>
+          <Corner sz={9} c="rgba(0,0,0,.25)"/>
+          {placing ? "⏳ ĐANG XỬ LÝ..." : "⚡ XÁC NHẬN ĐƠN"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── MENU MAIN ──
+  return (
+    <div style={{minHeight:"100vh",background:"#0a0714",paddingBottom:90}}>
+      {toast && <Toast {...toast}/>}
+      <div style={{position:"sticky",top:0,zIndex:100,background:"rgba(10,7,20,.96)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(147,51,234,.18)",padding:"11px 15px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <img src={LOGO} alt="AFK" onClick={onBack} style={{height:34,filter:"drop-shadow(0 0 8px rgba(147,51,234,.45))",cursor:"pointer"}}/>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:8,letterSpacing:3,color:"#475569"}}>MENU</div>
+          <div className="tg" style={{fontSize:10,fontWeight:700}}>ĐỒ UỐNG</div>
+        </div>
+      </div>
+      <div style={{padding:"14px 14px 14px"}}>
+        {groupMenu(menuItems && menuItems.length ? menuItems : MENU).map(({cat, items: gItems}, gi) => (
+          <div key={cat} style={{marginBottom:24}}>
+            {/* Group header */}
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,paddingBottom:8,borderBottom:"1px solid rgba(147,51,234,.15)"}}>
+              <div style={{height:3,width:18,borderRadius:2,background:CAT_COLOR[cat]||"#9333ea",boxShadow:"0 0 8px "+(CAT_COLOR[cat]||"#9333ea")+"99"}}/>
+              <span style={{fontSize:13,fontWeight:900,color:CAT_COLOR[cat]||"#eab308",letterSpacing:1,textShadow:"0 0 10px "+(CAT_COLOR[cat]||"#9333ea")+"66"}}>{cat}</span>
+              <span style={{fontSize:9,color:"#475569",marginLeft:"auto"}}>{gItems.length} món</span>
+            </div>
+            {/* Items grid */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
+              {gItems.map((item, i) => (
+                <div key={item.id} className="fu" style={{animationDelay:`${(gi*0.1+i*.05)}s`}}>
+                  <ProductCard item={item} onAdd={addToCart}/>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {count > 0 && (
+        <button onClick={()=>setCartOpen(true)} className="gg" style={{position:"fixed",bottom:22,right:18,background:"linear-gradient(135deg,#eab308,#f59e0b)",border:"none",borderRadius:"50%",width:58,height:58,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:200}}>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#0a0714" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <div style={{background:"#0a0714",color:"#eab308",borderRadius:"50%",width:17,height:17,fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-1,right:-1}}>{count}</div>
+        </button>
+      )}
+      {cartOpen && <CartDrawer cart={cart} setCart={setCart} onClose={()=>setCartOpen(false)} onCheckout={goCheckout}/>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// CUSTOMER INFO PAGE
+// ─────────────────────────────────────────────
+function CustomerInfoPage({ onBack, onNext }) {
+  const [name,     setName]    = useState("");
+  const [phone,    setPhone]   = useState("");
+  const [nameErr,  setNameErr] = useState("");
+  const [phoneErr, setPhoneErr]= useState("");
+
+  const submit = () => {
+    let ok = true;
+    if (!name.trim())  { setNameErr("Vui lòng nhập tên của bạn");        ok=false; } else setNameErr("");
+    if (!phone.trim()) { setPhoneErr("Vui lòng nhập số điện thoại");     ok=false; } else setPhoneErr("");
+    if (ok) onNext({ name: name.trim(), phone: phone.trim() });
+  };
+
+  return (
+    <div className="cy" style={{minHeight:"100vh",display:"flex",flexDirection:"column",
+      background:"radial-gradient(ellipse at center,#1a0a3e 0%,#0a0714 70%)",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",background:"rgba(147,51,234,.07)",top:"-10%",right:"-20%",filter:"blur(60px)"}}/>
+      <div style={{position:"absolute",width:250,height:250,borderRadius:"50%",background:"rgba(234,179,8,.05)",bottom:"10%",left:"-15%",filter:"blur(50px)"}}/>
+
+      {/* Header */}
+      <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={onBack} className="gb" style={{padding:"7px 11px",borderRadius:8,fontSize:12,display:"flex",alignItems:"center",gap:4}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <img src={LOGO} alt="AFK" style={{height:28,filter:"drop-shadow(0 0 6px rgba(147,51,234,.5))"}}/>
+      </div>
+
+      {/* Content */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",padding:"0 24px 40px"}} className="fu">
+        <div style={{marginBottom:28,textAlign:"center"}}>
+          <div style={{fontSize:28,marginBottom:8}}>👋</div>
+          <div style={{fontWeight:900,fontSize:18,color:"#f1f5f9",marginBottom:4,letterSpacing:1}}>Cho chúng tôi biết bạn là ai</div>
+          <div style={{fontSize:11,color:"#64748b"}}>Để nhân viên gọi tên bạn khi đồ sẵn nhé</div>
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          {/* Name */}
+          <div>
+            <div style={{fontSize:9,color:"#94a3b8",letterSpacing:2,marginBottom:6}}>TÊN CỦA BẠN</div>
+            <div style={{display:"flex",gap:8,alignItems:"stretch"}}>
+              <input
+                type="text" value={name}
+                onChange={e=>{setName(e.target.value);setNameErr("");}}
+                onKeyDown={e=>e.key==="Enter"&&document.getElementById("phone-input").focus()}
+                placeholder="Nguyễn Văn A..."
+                style={{flex:1,padding:"13px 15px",borderRadius:10,fontSize:14,
+                  background:"rgba(255,255,255,.06)",border:nameErr?"1px solid rgba(239,68,68,.6)":"1px solid rgba(147,51,234,.3)",
+                  color:"#fff",outline:"none",fontFamily:"'Courier New',monospace"}}/>
+              <button
+                onClick={()=>{setName(randomNick(name));setNameErr("");}}
+                style={{
+                  padding:"0 13px",borderRadius:10,border:"1px solid rgba(147,51,234,.45)",
+                  background:"rgba(147,51,234,.12)",color:"#a855f7",cursor:"pointer",
+                  fontFamily:"'Courier New',monospace",fontSize:11,fontWeight:700,
+                  letterSpacing:0.5,whiteSpace:"nowrap",flexShrink:0,
+                  transition:"all .2s",lineHeight:1.3,
+                }}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(147,51,234,.25)";e.currentTarget.style.borderColor="#a855f7";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(147,51,234,.12)";e.currentTarget.style.borderColor="rgba(147,51,234,.45)";}}>
+                🎲<br/>Nick
+              </button>
+            </div>
+            {nameErr&&<div style={{fontSize:10,color:"#ef4444",marginTop:4}}>{nameErr}</div>}
+          </div>
+
+          {/* Phone */}
+          <div>
+            <div style={{fontSize:9,color:"#94a3b8",letterSpacing:2,marginBottom:6}}>SỐ ĐIỆN THOẠI</div>
+            <input
+              id="phone-input" type="tel" value={phone}
+              onChange={e=>{setPhone(e.target.value);setPhoneErr("");}}
+              onKeyDown={e=>e.key==="Enter"&&submit()}
+              placeholder="0901 234 567"
+              style={{width:"100%",padding:"13px 15px",borderRadius:10,fontSize:14,
+                background:"rgba(255,255,255,.06)",border:phoneErr?"1px solid rgba(239,68,68,.6)":"1px solid rgba(147,51,234,.3)",
+                color:"#fff",outline:"none",fontFamily:"'Courier New',monospace"}}/>
+            {phoneErr&&<div style={{fontSize:10,color:"#ef4444",marginTop:4}}>{phoneErr}</div>}
+          </div>
+
+          <button onClick={submit} className="bb gg"
+            style={{width:"100%",padding:"16px",borderRadius:11,fontSize:14,letterSpacing:2,marginTop:4,position:"relative",overflow:"hidden"}}>
+            <Corner sz={9} c="rgba(0,0,0,.25)"/>⚡ XEM THỰC ĐƠN
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// LANDING PAGE
+// ─────────────────────────────────────────────
+function LandingPage({ onStart }) {
+  return (
+    <div className="cy" style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      background:"radial-gradient(ellipse at center,#1a0a3e 0%,#0a0714 70%)",position:"relative",overflow:"hidden",padding:24}}>
+      <div style={{position:"absolute",width:350,height:350,borderRadius:"50%",background:"rgba(147,51,234,.07)",top:"5%",left:"-25%",filter:"blur(60px)"}}/>
+      <div style={{position:"absolute",width:280,height:280,borderRadius:"50%",background:"rgba(234,179,8,.05)",bottom:"5%",right:"-15%",filter:"blur(50px)"}}/>
+      {[{top:16,left:16},{top:16,right:16},{bottom:16,left:16},{bottom:16,right:16}].map((pos,i)=>(
+        <div key={i} style={{position:"absolute",...pos,width:45,height:45,
+          borderTop:   pos.top!==undefined?"1.5px solid rgba(234,179,8,.35)":undefined,
+          borderBottom:pos.bottom!==undefined?"1.5px solid rgba(234,179,8,.35)":undefined,
+          borderLeft:  pos.left!==undefined?"1.5px solid rgba(234,179,8,.35)":undefined,
+          borderRight: pos.right!==undefined?"1.5px solid rgba(234,179,8,.35)":undefined}}/>
+      ))}
+      <div className="fl fu" style={{marginBottom:4}}>
+        <img src={LOGO} alt="AFK HUB" style={{width:270,maxWidth:"82vw",filter:"drop-shadow(0 0 30px rgba(147,51,234,.55))"}}/>
+      </div>
+      <div className="fu" style={{animationDelay:".18s",textAlign:"center",marginBottom:36}}>
+        <div style={{fontSize:10,letterSpacing:4,color:"rgba(234,179,8,.65)",marginBottom:14}}>— GAMING CAFE —</div>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0}}>
+          {["Đói là ăn","Khát phải uống","Mood xuống gọi AFK"].map((text,i)=>(
+            <div key={i} className="fu" style={{animationDelay:(i*.09)+"s",display:"flex",flexDirection:"column",alignItems:"center"}}>
+              <div style={{
+                whiteSpace:"nowrap",fontWeight:800,
+                letterSpacing: i===2 ? 2.5 : 1.5,
+                fontSize: i===2 ? 15 : 12,
+                background: i===2
+                  ? "linear-gradient(90deg,#eab308,#f59e0b,#eab308)"
+                  : "linear-gradient(90deg,#c084fc,#a855f7)",
+                WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+                opacity: i===2 ? 1 : 0.75,
+              }}>{text}</div>
+              {i < 2 && (
+                <div style={{
+                  width:5,height:5,borderRadius:"50%",margin:"7px 0",
+                  background:"rgba(147,51,234,.45)",
+                  boxShadow:"0 0 6px rgba(147,51,234,.6)",
+                }}/>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="fu" style={{animationDelay:".35s"}}>
+        <button onClick={onStart} className="bb gg" style={{padding:"17px 52px",borderRadius:12,fontSize:15,letterSpacing:3,position:"relative",overflow:"hidden"}}>
+          <Corner sz={9} c="rgba(0,0,0,.25)"/>⚡ GỌI ĐỒ UỐNG
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// ROOT APP
+// ─────────────────────────────────────────────
+function App() {
+  const [view,      setView]      = useState("landing");
+  const [cart,      setCart]      = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
+  const [customer,  setCustomer]  = useState(null);
+
+  useEffect(() => {
+    fsLoadMenu().then(items => { if (items.length) setMenuItems(items); });
+  }, []);
+
+  return (
+    <div style={{minHeight:"100vh",background:"#0a0714",maxWidth:480,margin:"0 auto",position:"relative",overflow:"hidden"}}>
+      <Scanline/>
+      {view==="landing" && <LandingPage onStart={()=>setView("info")}/>}
+      {view==="info"    && <CustomerInfoPage onBack={()=>setView("landing")} onNext={info=>{setCustomer(info);setView("menu");}}/>}
+      {view==="menu"    && <MenuPage cart={cart} setCart={setCart} menuItems={menuItems} customer={customer} onBack={()=>setView("info")}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
